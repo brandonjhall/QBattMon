@@ -42,4 +42,6 @@ DEFINES += \
         _DATADIR=\\\"/sys/class/power_supply\\\"
 
 DISTFILES += \
-    CHANGELOG.md
+    CHANGELOG.md \
+    COPYING \
+    README.md
