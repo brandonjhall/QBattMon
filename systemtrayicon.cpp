@@ -42,14 +42,9 @@ void SystemTrayIcon::onBatteryError(QString error, BatteryError batteryError)
     switch (batteryError) {
     case BatteryError::NoBattery:
     {
-//        QTimer *timer = new QTimer;
-
         showMessage("No Battery", error, QSystemTrayIcon::Critical);
-//        connect(timer, &QTimer::timeout, &QApplication::quit);
-//        timer->start(5000);
+        setIcon(QIcon::fromTheme("battery-missing"));
     }
-        break;
-    case BatteryError::NoError:
         break;
     default:
         break;
@@ -67,6 +62,8 @@ void SystemTrayIcon::createMenu()
 
 void SystemTrayIcon::updateIcon()
 {
+    QString iconName = icon().name();
+    QString newIconName;
     BatteryStatus status = static_cast<BatteryStatus>(model->item(0, 4)->data(Qt::UserRole).toInt());
     BatteryLevel level = static_cast<BatteryLevel>(model->item(0, 6)->data(Qt::UserRole).toInt());
 
@@ -74,10 +71,10 @@ void SystemTrayIcon::updateIcon()
     case BatteryStatus::Full:
         switch (level) {
         case BatteryLevel::Full:
-            setIcon(QIcon::fromTheme("battery-full"));
+            newIconName = "battery-full";
             break;
         case BatteryLevel::Normal:
-            setIcon(QIcon::fromTheme("battery-full-charged"));
+            newIconName = "battery-full-charged";
             break;
         default:
             break;
@@ -86,13 +83,31 @@ void SystemTrayIcon::updateIcon()
     case BatteryStatus::Charging:
         switch (level) {
         case BatteryLevel::Full:
-            setIcon(QIcon::fromTheme("battery-full-charging"));
+            newIconName = "battery-full-charging";
             break;
         case BatteryLevel::Normal:
-            setIcon(QIcon::fromTheme("battery-good-charging"));
+            if(capacity >= 90)
+            {
+                newIconName = "battery-full-charging";
+            }
+            else if(capacity >= 45)
+            {
+                newIconName = "battery-good-charging";
+            }
+            else if(capacity <= 44)
+            {
+                newIconName = "battery-low-charging";
+            }
             break;
         case BatteryLevel::Low:
-            setIcon(QIcon::fromTheme("battery-low-charging"));
+            if(capacity >= 20)
+            {
+                newIconName = "battery-low-charging";
+            }
+            else if(capacity < 20)
+            {
+                newIconName = "battery-caution-charging";
+            }
             break;
         }
         break;
@@ -102,15 +117,71 @@ void SystemTrayIcon::updateIcon()
             setIcon(QIcon::fromTheme("battery-full"));
             break;
         case BatteryLevel::Normal:
-            setIcon(QIcon::fromTheme("battery-good"));
+            if(capacity >= 90)
+            {
+                newIconName = "battery-full";
+            }
+            else if(capacity >= 45)
+            {
+                newIconName = "battery-good";
+            }
+            else if(capacity <= 44)
+            {
+                newIconName = "battery-low";
+            }
             break;
         case BatteryLevel::Low:
-            setIcon(QIcon::fromTheme("battery-low"));
+            if(capacity >= 20)
+            {
+                newIconName = "battery-low";
+            }
+            else if(capacity >= 10)
+            {
+                newIconName = "battery-caution";
+            }
+            else if(capacity < 10)
+            {
+                newIconName = "battery-empty";
+            }
             break;
         }
         break;
     default:
         break;
+    }
+
+    if(newIconName != iconName)
+    {
+        QString title;
+        QString message;
+        QSystemTrayIcon::MessageIcon msgIcon;
+        QStringList warnings = QStringList() << "battery-low" << "battery-caution" << "battery-empty";
+
+        setIcon(QIcon::fromTheme(newIconName));
+
+        if(newIconName == "battery-low")
+        {
+            title = "Caution:";
+            message = "Battery is low";
+            msgIcon = QSystemTrayIcon::Information;
+        }
+
+        if(newIconName == "battery-caution")
+        {
+            title = "Warning:";
+            message = "Battery is almost empty";
+            msgIcon = QSystemTrayIcon::Warning;
+        }
+
+        if(newIconName == "battery-empty")
+        {
+            title = "CRITICAL:";
+            message = "Battery is empty!";
+            msgIcon = QSystemTrayIcon::Critical;
+        }
+
+        if(warnings.contains(newIconName))
+            showMessage(title, message, msgIcon, 3000);
     }
 }
 
