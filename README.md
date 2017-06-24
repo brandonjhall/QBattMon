@@ -1,4 +1,4 @@
-# QBattMon
+# [QBattMon](https://gitlab.com/brandonjhall/QBattMon)
 
 ## Overview ##
 Easily monitor laptop battery manufacturer information, battery charge, and battery usage with QBattMon
@@ -8,7 +8,7 @@ Easily monitor laptop battery manufacturer information, battery charge, and batt
  * System tray icon notifies you of important battery events
  * Information window gives you detailed information about the status of your laptop battery
 
-## Licensing ##
+## [Licensing](https://gitlab.com/brandonjhall/QBattMon/blob/master/COPYING) ##
 Copyright 2017 by Brandon Hall
 brandon.james.hall2@gmail.com
 
@@ -24,3 +24,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with QBattMon. If not, see <http://www.gnu.org/licenses/>.
+
+## Links ##
+ * [Change Log](https://gitlab.com/brandonjhall/QBattMon/blob/master/CHANGELOG.md)
+ * [GNU General Public License](https://gitlab.com/brandonjhall/QBattMon/blob/master/COPYING)
+ * [GitHub Mirror](https://github.com/brandonjhall/QBattMon)
