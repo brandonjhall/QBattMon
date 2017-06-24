@@ -42,7 +42,7 @@ void SystemTrayIcon::onBatteryError(QString error, BatteryError batteryError)
     switch (batteryError) {
     case BatteryError::NoBattery:
     {
-        showMessage("No Battery", error, QSystemTrayIcon::Critical);
+        showMessage("No Battery", error, QSystemTrayIcon::Critical, 3000);
         setIcon(QIcon::fromTheme("battery-missing"));
     }
         break;
@@ -131,15 +131,11 @@ void SystemTrayIcon::updateIcon()
             }
             break;
         case BatteryLevel::Low:
-            if(capacity >= 20)
-            {
-                newIconName = "battery-low";
-            }
-            else if(capacity >= 10)
+            if(capacity >= 10)
             {
                 newIconName = "battery-caution";
             }
-            else if(capacity < 10)
+            else if(capacity < 6)
             {
                 newIconName = "battery-empty";
             }
@@ -195,15 +191,15 @@ void SystemTrayIcon::onStatusChanged(BatteryStatus status)
     switch (status) {
     case BatteryStatus::Full:
         statusStr = "Battery full";
-        showMessage(statusStr, "Battery is full");
+        showMessage(statusStr, "Battery is full", QSystemTrayIcon::Information, 3000);
         break;
     case BatteryStatus::Charging:
         statusStr = "Charging battery";
-        showMessage(statusStr, "Charging battery");
+        showMessage(statusStr, "Charging battery", QSystemTrayIcon::Information, 3000);
         break;
     case BatteryStatus::Discharging:
         statusStr = "Discharging battery";
-        showMessage(statusStr, QString("Time Remaining: " + model->item(0, 12)->text()));
+        showMessage(statusStr, QString("Time Remaining: " + model->item(0, 12)->text()), QSystemTrayIcon::Information, 3000);
         break;
     default:
         break;
