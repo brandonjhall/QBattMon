@@ -22,7 +22,13 @@
 - Added functions to main to read and write settings for the application
 - Added functionality to MainWidget to update the settings and Battery for a selected battery if multiple batteries are available
 
-## 1.1.1 (2017-06-23)
+## [1.1.1] (https://gitlab.com/brandonjhall/QBattMon/tree/v1.1.1) (2017-06-23)
 
 **Implemented bug fixes:**
 - Fixed bug where MainWidget contained no data if the -t or --tray option was used
+
+## [1.2.0] (https://gitlab.com/brandonjhall/QBattMon/tree/v1.2.0) (2017-06024)
+
+**Implemented enhancements:**
+- Made the system tray icon more accurately represent battery capacity
+- Added warning messages when battery capacit gets below 20%, 10%, and 7%.
