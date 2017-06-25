@@ -31,6 +31,7 @@ MainWidget::MainWidget(QWidget *parent) :
 {
     ui->setupUi(this);
     mapper = new QDataWidgetMapper;
+    ui->brightnessPercent->setText(ui->horizontalSlider->getBrightnessPercent());
 }
 
 MainWidget::~MainWidget()

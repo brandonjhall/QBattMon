@@ -131,7 +131,7 @@ void SystemTrayIcon::updateIcon()
             }
             break;
         case BatteryLevel::Low:
-            if(capacity >= 10)
+            if(capacity >= 7)
             {
                 newIconName = "battery-caution";
             }

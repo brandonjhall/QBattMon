@@ -27,21 +27,23 @@ SOURCES += \
         main.cpp \
         mainwidget.cpp \
     systemtrayicon.cpp \
-    battery.cpp
+    battery.cpp \
+    brightnessslider.cpp
 
 HEADERS += \
         mainwidget.h \
     systemtrayicon.h \
     battery.h \
-    globalheader.h
+    globalheader.h \
+    brightnessslider.h
 
 FORMS += \
         mainwidget.ui
-
-DEFINES += \
-        _DATADIR=\\\"/sys/class/power_supply\\\"
 
 DISTFILES += \
     CHANGELOG.md \
     COPYING \
     README.md
+
+LIBS += -lX11 \
+        -lXrandr
