@@ -25,6 +25,7 @@
 
 class QStandardItemModel;
 class QDataWidgetMapper;
+class QLocalServer;
 
 namespace Ui {
 class MainWidget;
@@ -42,6 +43,7 @@ public:
     void setModel(QStandardItemModel *value);
 
 public slots:
+    bool setupServer(QString serverName);
 
 signals:
     void selectedBatteryChanged(int selectedBattery);
@@ -50,9 +52,11 @@ private:
     Ui::MainWidget *ui;
     QStandardItemModel *model;
     QDataWidgetMapper *mapper;
+    QLocalServer *server;
 
 private slots:
     void selectBattery();
+    void onNewConnection();
 };
 
 #endif // MAINWIDGET_H

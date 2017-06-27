@@ -33,11 +33,10 @@
 #include "mainwidget.h"
 #include "battery.h"
 
-#ifdef QT_DEBUG
 #include <QDebug>
-#endif
 
 static bool showMainWidget = true;
+static bool connectedToServer;
 static QProcessEnvironment env;
 static SystemTrayIcon *tray;
 static QLocalSocket *soc;
@@ -68,7 +67,7 @@ int main(int argc, char *argv[])
     checkForServer();
     handleArguments(a);
 
-    w = new MainWidget;
+    tray = new SystemTrayIcon;
     battery = new Battery;
     int exitCode;
 
@@ -91,10 +90,8 @@ int main(int argc, char *argv[])
     QObject::connect(battery, &Battery::batteryError, readBatteryError);
     QObject::connect(tray, &SystemTrayIcon::activated, onTrayActivated);
 
-#ifdef QT_DEBUG
     qDebug() << "User: " << env.value("USER", "qt");
     qDebug() << "Display: " << env.value("DISPLAY", ":0.0");
-#endif
     readConfig();
     exitCode = a.exec();
     writeConfig();
@@ -155,14 +152,19 @@ static void handleArguments(const QApplication &app)
     if(parser.isSet("tray"))
         showMainWidget = false;
 
-    if(parser.isSet("set"))
+    if(connectedToServer)
     {
-        sendMessage(LocalMSG(MessageType::BrightnessSet, parser.value("set").toDouble()));
-    }
+        if(parser.isSet("set"))
+        {
+            sendMessage(LocalMSG(MessageType::BrightnessSet, parser.value("set").toDouble()));
+            exit(0);
+        }
 
-    if(parser.isSet("inc"))
-    {
-        sendMessage(LocalMSG(MessageType::BrightnessUp, parser.value("inc").toDouble()));
+        if(parser.isSet("inc"))
+        {
+            sendMessage(LocalMSG(MessageType::BrightnessUp, parser.value("inc").toDouble()));
+            exit(0);
+        }
     }
 }
 
@@ -182,14 +184,10 @@ static void onTrayActivated(QSystemTrayIcon::ActivationReason reason)
 
 static void readBatteryError(QString error, BatteryError errorType)
 {
-#ifdef QT_DEBUG
     qDebug() << "Error Text: " << error;
-#endif
     switch (errorType) {
     case BatteryError::NoBattery:
-#ifdef QT_DEBUG
         qDebug() << "Error Type: " << "NoBattery";
-#endif
         w->close();
         break;
     default:
@@ -204,42 +202,35 @@ static void checkForServer()
 
     soc->connectToServer(serverName);
     if(soc->waitForConnected())
-#ifdef QT_DEBUG
+    {
+        connectedToServer = true;
         qDebug() << "Connected";
-#endif
+    }
     else
     {
-        tray = new SystemTrayIcon;
-        if(tray->setupServer("testing"))
+        connectedToServer = false;
+        w = new MainWidget;
+        if(w->setupServer(serverName))
         {
+            qDebug() << soc->errorString();
+            qDebug() << "Started server...";
             soc->close();
             soc = nullptr;
-#ifdef QT_DEBUG
-            qDebug() << "Started server...";
-#endif
         }
     }
 }
 
 void sendMessage(LocalMSG message)
 {
-    if(soc == nullptr)
-    {}
-    else
-    {
-        QDataStream stream(soc);
+    QDataStream stream(soc);
 
-        stream << message;
-        bool written = soc->waitForBytesWritten();
-#ifdef QT_DEBUG
-        qDebug() << "Did the socket write? " << written;
-#endif
-        if(written)
-        {
-            soc->disconnectFromServer();
-            soc->close();
-            exit(0);
-        }
+    stream << message;
+    bool written = soc->waitForBytesWritten();
+    qDebug() << "Did the socket write? " << written;
+    if(written)
+    {
+        soc->disconnectFromServer();
+        soc->close();
     }
 }
 
@@ -247,21 +238,6 @@ QDataStream &operator<<(QDataStream &out, const LocalMSG &message)
 {
     out << message.version << (int)message.type << message.percentOfBrightness;
     return out;
-}
-
-QDataStream &operator>>(QDataStream &in, LocalMSG &message)
-{
-    MessageType type;
-    QString version;
-    double percent;
-    int iType;
-
-    in >> version >> iType >> percent;
-    type = (MessageType)iType;
-    message = LocalMSG(type, percent);
-    message.setVersion(version);
-
-    return in;
 }
 
 LocalMSG::LocalMSG(MessageType mType, double percent)

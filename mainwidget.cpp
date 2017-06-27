@@ -17,13 +17,16 @@
  *   along with QBattMon. If not, see <http://www.gnu.org/licenses/>.      *
  **************************************************************************/
 
-#include <QDataWidgetMapper>
+#include <QtNetwork/QLocalServer>
+#include <QtNetwork/QLocalSocket>
 #include <QStandardItemModel>
+#include <QDataWidgetMapper>
 #include <QMetaProperty>
 #include <QSettings>
 
 #include "mainwidget.h"
 #include "ui_mainwidget.h"
+#include "globalheader.h"
 
 MainWidget::MainWidget(QWidget *parent) :
     QWidget(parent),
@@ -88,7 +91,38 @@ void MainWidget::selectBattery()
     }
 }
 
-ComboBoxDelegate::ComboBoxDelegate(QObject *parent)
+bool MainWidget::setupServer(QString serverName)
+{
+    server = new QLocalServer;
+
+//    server->removeServer(serverName);
+    server->setSocketOptions(QLocalServer::UserAccessOption);
+    connect(server, &QLocalServer::newConnection, this, &MainWidget::onNewConnection);
+    return server->listen(serverName);
+}
+
+void MainWidget::onNewConnection()
+{
+    QString string;
+    return;
+}
+
+QDataStream &operator>>(QDataStream &in, LocalMSG &message)
+{
+    MessageType type;
+    QString version;
+    double percent;
+    int iType;
+
+    in >> version >> iType >> percent;
+    type = (MessageType)iType;
+    message = LocalMSG(type, percent);
+    message.setVersion(version);
+
+    return in;
+}
+
+ComboBoxDelegate::ComboBoxDelegate(QObject *parent) : QItemDelegate(parent)
 {
 
 }

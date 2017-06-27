@@ -47,3 +47,9 @@ DISTFILES += \
 
 LIBS += -lX11 \
         -lXrandr
+
+DEFINES += QT_NO_DEBUG_OUTPUT
+
+CONFIG(debug, debug | release) {
+    DEFINES -= QT_NO_DEBUG_OUTPUT
+}

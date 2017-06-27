@@ -61,5 +61,4 @@ struct LocalMSG
 QDataStream &operator<<(QDataStream &out, const LocalMSG &message);
 QDataStream &operator>>(QDataStream &in, LocalMSG &message);
 
-
 #endif

@@ -69,12 +69,6 @@ void SystemTrayIcon::createMenu()
     setContextMenu(menu);
 }
 
-void SystemTrayIcon::onNewConnection()
-{
-    QString string;
-    return;
-}
-
 void SystemTrayIcon::updateIcon()
 {
     QString iconName = icon().name();
@@ -222,15 +216,6 @@ void SystemTrayIcon::onStatusChanged(BatteryStatus status)
 
     toolTipStr = statusStr + "\nBattery Level: " + capacityStr;
     setToolTip(toolTipStr);
-}
-
-bool SystemTrayIcon::setupServer(QString serverName)
-{
-    server = new QLocalServer;
-
-    server->setSocketOptions(QLocalServer::UserAccessOption);
-    connect(server, &QLocalServer::newConnection, this, &SystemTrayIcon::onNewConnection);
-    return server->listen(serverName);
 }
 
 void SystemTrayIcon::setCapacity(int value)
