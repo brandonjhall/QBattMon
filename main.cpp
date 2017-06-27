@@ -17,14 +17,17 @@
  *   along with QBattMon. If not, see <http://www.gnu.org/licenses/>.      *
  **************************************************************************/
 
-#include <QApplication>
+#include <QtNetwork/QLocalServer>
+#include <QtNetwork/QLocalSocket>
+#include <QProcessEnvironment>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
+#include <QApplication>
 #include <QSettings>
 #include <QIcon>
 
-#include "globalheader.h"
 #include "systemtrayicon.h"
+#include "globalheader.h"
 #include "mainwidget.h"
 #include "battery.h"
 
@@ -33,35 +36,43 @@
 #endif
 
 static bool showMainWidget = true;
-static MainWidget *w;
+static QProcessEnvironment env;
+static SystemTrayIcon *tray;
 static Battery *battery;
+static MainWidget *w;
 
-void readConfig();
-void writeConfig();
-void configureApplication(const QApplication &app);
-void configureCommandLine(const QApplication &app);
-void onTrayActivated(QSystemTrayIcon::ActivationReason reason);
-void readBatteryError(QString error, BatteryError errorType);
+static void onTrayActivated(QSystemTrayIcon::ActivationReason reason);
+static void readBatteryError(QString error, BatteryError errorType);
+static void configureApplication(const QApplication &app);
+static void configureCommandLine(const QApplication &app);
+static void checkForServer();
+static void writeConfig();
+static void readConfig();
+
+//extern MainWidget *mainWidget()
+//{
+//    return w;
+//}
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
     w = new MainWidget;
-    SystemTrayIcon *tray = new SystemTrayIcon;
+    env = QProcessEnvironment::systemEnvironment();
+    tray = new SystemTrayIcon;
     battery = new Battery;
+    int exitCode;
 
     configureApplication(a);
     configureCommandLine(a);
+
     tray->setModel(battery->getModel());
     w->setModel(battery->getModel());
-
-    QObject::connect(battery, &Battery::batteryError, readBatteryError);
-    QObject::connect(w, &MainWidget::selectedBatteryChanged, battery, &Battery::setBatteryNumber);
-    QObject::connect(battery, &Battery::batteryError, tray, &SystemTrayIcon::onBatteryError);
-    QObject::connect(battery, &Battery::batteryStatusChanged, tray, &SystemTrayIcon::onStatusChanged);
-    QObject::connect(battery, &Battery::batteryCapacityChanged, tray, &SystemTrayIcon::setCapacity);
-    QObject::connect(battery, &Battery::filesUpdated, tray, &SystemTrayIcon::updateIcon);
-    QObject::connect(tray, &SystemTrayIcon::activated, onTrayActivated);
+#ifdef QT_DEBUG
+    qDebug() << "User: " << env.value("USER", "qt");
+    qDebug() << "Display: " << env.value("DISPLAY", ":0.0");
+#endif
 
     if(showMainWidget)
     {
@@ -69,37 +80,45 @@ int main(int argc, char *argv[])
         w->show();
     }
     else
-    {
         tray->show();
-    }
 
+    QObject::connect(battery, &Battery::batteryStatusChanged, tray, &SystemTrayIcon::onStatusChanged);
+    QObject::connect(battery, &Battery::batteryCapacityChanged, tray, &SystemTrayIcon::setCapacity);
+    QObject::connect(w, &MainWidget::selectedBatteryChanged, battery, &Battery::setBatteryNumber);
+    QObject::connect(battery, &Battery::batteryError, tray, &SystemTrayIcon::onBatteryError);
+    QObject::connect(battery, &Battery::filesUpdated, tray, &SystemTrayIcon::updateIcon);
+    QObject::connect(battery, &Battery::batteryError, readBatteryError);
+    QObject::connect(tray, &SystemTrayIcon::activated, onTrayActivated);
+
+    checkForServer();
     readConfig();
-    int exitCode = a.exec();
-
+    exitCode = a.exec();
     writeConfig();
 
     return exitCode;
 }
 
-void readConfig()
+static void readConfig()
 {
-    bool ok;
     QSettings settings;
-    int batteryNumber = settings.value("battery/number", 0).toInt(&ok);
+    int batteryNumber;
+    bool ok;
+
+    batteryNumber = settings.value("battery/number", 0).toInt(&ok);
 
     if(ok)
         battery->setBatteryNumber(batteryNumber);
 }
 
-void writeConfig()
+static void writeConfig()
 {
-    QSettings settings;
     int batteryNumber = battery->getBatteryNumber();
+    QSettings settings;
 
     settings.setValue("battery/number", batteryNumber);
 }
 
-void configureApplication(const QApplication &app)
+static void configureApplication(const QApplication &app)
 {
     QIcon::setThemeName("Adwaita");
     app.setQuitOnLastWindowClosed(false);
@@ -108,35 +127,25 @@ void configureApplication(const QApplication &app)
     app.setApplicationVersion("1.1.1");
 }
 
-void configureCommandLine(const QApplication &app)
+static void configureCommandLine(const QApplication &app)
 {
+    QCommandLineOption trayOnly(QStringList() << "t" << "tray",
+                                QCoreApplication::translate("main", "Start application in the tray only."));
     QCommandLineParser parser;
 
     parser.setApplicationDescription("CLI usage for QBattMon");
-    parser.addHelpOption();
-    parser.addVersionOption();
-
-    QCommandLineOption trayOnly(QStringList() << "t" << "tray",
-                                   QCoreApplication::translate("main", "Start application in the tray only."));
     parser.addOption(trayOnly);
-
+    parser.addVersionOption();
+    parser.addHelpOption();
     parser.process(app);
 
     if(parser.isSet(trayOnly))
-    {
         showMainWidget = false;
-    }
 }
 
-void onTrayActivated(QSystemTrayIcon::ActivationReason reason)
+static void onTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
     switch (reason) {
-    case QSystemTrayIcon::DoubleClick:
-        if(w->isVisible())
-            w->close();
-        else
-            w->show();
-        break;
     case QSystemTrayIcon::Trigger:
         if(w->isVisible())
             w->close();
@@ -148,7 +157,7 @@ void onTrayActivated(QSystemTrayIcon::ActivationReason reason)
     }
 }
 
-void readBatteryError(QString error, BatteryError errorType)
+static void readBatteryError(QString error, BatteryError errorType)
 {
 #ifdef QT_DEBUG
     qDebug() << "Error Text: " << error;
@@ -163,4 +172,15 @@ void readBatteryError(QString error, BatteryError errorType)
     default:
         break;
     }
+}
+
+static void checkForServer()
+{
+    QLocalSocket *soc = new QLocalSocket;
+
+    soc->connectToServer("testing");
+    if(soc->waitForConnected())
+        qDebug() << "Connected";
+    else if(tray->setupServer("testing"))
+        qDebug() << "Started server...";
 }

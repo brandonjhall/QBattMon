@@ -17,23 +17,31 @@
  *   along with QBattMon. If not, see <http://www.gnu.org/licenses/>.      *
  **************************************************************************/
 
+#include <QtNetwork/QLocalServer>
 #include <QStandardItemModel>
-#include <QTimer>
 #include <QApplication>
-#include <QDir>
+#include <QTimer>
 #include <QMenu>
+#include <QDir>
 
 #include "systemtrayicon.h"
+//#include "mainwidget.h"
+
+//extern MainWidget *mainWidget();
 
 SystemTrayIcon::SystemTrayIcon(const QIcon &icon, QObject *parent)
     :QSystemTrayIcon(icon, parent)
 {
+//    mWidget = mainWidget();
+//    mainWidget()->show();
     createMenu();
 }
 
 SystemTrayIcon::SystemTrayIcon(QObject *parent)
     :QSystemTrayIcon(QIcon::fromTheme("battery-full"), parent)
 {
+//    mWidget = mainWidget();
+//    mainWidget()->show();
     createMenu();
 }
 
@@ -207,6 +215,14 @@ void SystemTrayIcon::onStatusChanged(BatteryStatus status)
 
     toolTipStr = statusStr + "\nBattery Level: " + capacityStr;
     setToolTip(toolTipStr);
+}
+
+bool SystemTrayIcon::setupServer(QString serverName)
+{
+    server = new QLocalServer;
+
+    server->setSocketOptions(QLocalServer::UserAccessOption);
+    return server->listen(serverName);
 }
 
 void SystemTrayIcon::setCapacity(int value)

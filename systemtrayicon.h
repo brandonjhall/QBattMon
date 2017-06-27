@@ -25,6 +25,8 @@
 #include "globalheader.h"
 
 class QStandardItemModel;
+class MainWidget;
+class QLocalServer;
 
 class SystemTrayIcon : public QSystemTrayIcon
 {
@@ -40,10 +42,11 @@ public:
     int getCapacity() const;
 
 public slots:
+    void onBatteryError(QString error, BatteryError batteryError);
     void onStatusChanged(BatteryStatus status);
+    bool setupServer(QString serverName);
     void setCapacity(int value);
     void updateIcon();
-    void onBatteryError(QString error, BatteryError batteryError);
 
 private:
     void createMenu();
@@ -52,7 +55,9 @@ private:
     QString statusStr;
     QString toolTipStr;
     QString capacityStr;
+    QLocalServer *server;
     QStandardItemModel *model;
+//    MainWidget *mWidget;
 };
 
 #endif // SYSTEMTRAYICON_H
