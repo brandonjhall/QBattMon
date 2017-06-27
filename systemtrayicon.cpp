@@ -20,6 +20,7 @@
 #include <QtNetwork/QLocalServer>
 #include <QStandardItemModel>
 #include <QApplication>
+#include <QDataStream>
 #include <QTimer>
 #include <QMenu>
 #include <QDir>
@@ -66,6 +67,12 @@ void SystemTrayIcon::createMenu()
     // Uses the lamda expression [=](){ QApplication::quit(); } in place of a slot
     menu->addAction(QIcon(), "Exit", [=](){ QApplication::quit(); });
     setContextMenu(menu);
+}
+
+void SystemTrayIcon::onNewConnection()
+{
+    QString string;
+    return;
 }
 
 void SystemTrayIcon::updateIcon()
@@ -222,6 +229,7 @@ bool SystemTrayIcon::setupServer(QString serverName)
     server = new QLocalServer;
 
     server->setSocketOptions(QLocalServer::UserAccessOption);
+    connect(server, &QLocalServer::newConnection, this, &SystemTrayIcon::onNewConnection);
     return server->listen(serverName);
 }
 

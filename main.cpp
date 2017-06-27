@@ -26,6 +26,8 @@
 #include <QSettings>
 #include <QIcon>
 
+#include <stdlib.h>
+
 #include "systemtrayicon.h"
 #include "globalheader.h"
 #include "mainwidget.h"
@@ -38,13 +40,15 @@
 static bool showMainWidget = true;
 static QProcessEnvironment env;
 static SystemTrayIcon *tray;
+static QLocalSocket *soc;
 static Battery *battery;
 static MainWidget *w;
 
 static void onTrayActivated(QSystemTrayIcon::ActivationReason reason);
 static void readBatteryError(QString error, BatteryError errorType);
 static void configureApplication(const QApplication &app);
-static void configureCommandLine(const QApplication &app);
+static void handleArguments(const QApplication &app);
+static void sendMessage(LocalMSG message);
 static void checkForServer();
 static void writeConfig();
 static void readConfig();
@@ -57,22 +61,19 @@ static void readConfig();
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    soc = nullptr;
+    env = QProcessEnvironment::systemEnvironment();
+
+    configureApplication(a);
+    checkForServer();
+    handleArguments(a);
 
     w = new MainWidget;
-    env = QProcessEnvironment::systemEnvironment();
-    tray = new SystemTrayIcon;
     battery = new Battery;
     int exitCode;
 
-    configureApplication(a);
-    configureCommandLine(a);
-
     tray->setModel(battery->getModel());
     w->setModel(battery->getModel());
-#ifdef QT_DEBUG
-    qDebug() << "User: " << env.value("USER", "qt");
-    qDebug() << "Display: " << env.value("DISPLAY", ":0.0");
-#endif
 
     if(showMainWidget)
     {
@@ -90,7 +91,10 @@ int main(int argc, char *argv[])
     QObject::connect(battery, &Battery::batteryError, readBatteryError);
     QObject::connect(tray, &SystemTrayIcon::activated, onTrayActivated);
 
-    checkForServer();
+#ifdef QT_DEBUG
+    qDebug() << "User: " << env.value("USER", "qt");
+    qDebug() << "Display: " << env.value("DISPLAY", ":0.0");
+#endif
     readConfig();
     exitCode = a.exec();
     writeConfig();
@@ -127,20 +131,39 @@ static void configureApplication(const QApplication &app)
     app.setApplicationVersion("1.1.1");
 }
 
-static void configureCommandLine(const QApplication &app)
+static void handleArguments(const QApplication &app)
 {
-    QCommandLineOption trayOnly(QStringList() << "t" << "tray",
-                                QCoreApplication::translate("main", "Start application in the tray only."));
     QCommandLineParser parser;
 
+    QCommandLineOption setBrightness(QStringList() << "s" << "set",
+                                     QCoreApplication::translate("main", "Set backlight brightness to <percentage>"),
+                                     "percentage");
+    QCommandLineOption incBrightness(QStringList() << "i" << "inc",
+                                     QCoreApplication::translate("main", "Increment backlight brightness by <percentage>"),
+                                     "percentage");
+    QCommandLineOption trayOnly(QStringList() << "t" << "tray",
+                                QCoreApplication::translate("main", "Start application in the tray only."));
+
     parser.setApplicationDescription("CLI usage for QBattMon");
+    parser.addOption(setBrightness);
+    parser.addOption(incBrightness);
     parser.addOption(trayOnly);
     parser.addVersionOption();
     parser.addHelpOption();
     parser.process(app);
 
-    if(parser.isSet(trayOnly))
+    if(parser.isSet("tray"))
         showMainWidget = false;
+
+    if(parser.isSet("set"))
+    {
+        sendMessage(LocalMSG(MessageType::BrightnessSet, parser.value("set").toDouble()));
+    }
+
+    if(parser.isSet("inc"))
+    {
+        sendMessage(LocalMSG(MessageType::BrightnessUp, parser.value("inc").toDouble()));
+    }
 }
 
 static void onTrayActivated(QSystemTrayIcon::ActivationReason reason)
@@ -176,11 +199,74 @@ static void readBatteryError(QString error, BatteryError errorType)
 
 static void checkForServer()
 {
-    QLocalSocket *soc = new QLocalSocket;
+    QString serverName = QApplication::applicationName() + "-" + QApplication::applicationVersion() + "-" + env.value("USER", "qt");
+    soc = new QLocalSocket;
 
-    soc->connectToServer("testing");
+    soc->connectToServer(serverName);
     if(soc->waitForConnected())
+#ifdef QT_DEBUG
         qDebug() << "Connected";
-    else if(tray->setupServer("testing"))
-        qDebug() << "Started server...";
+#endif
+    else
+    {
+        tray = new SystemTrayIcon;
+        if(tray->setupServer("testing"))
+        {
+            soc->close();
+            soc = nullptr;
+#ifdef QT_DEBUG
+            qDebug() << "Started server...";
+#endif
+        }
+    }
+}
+
+void sendMessage(LocalMSG message)
+{
+    if(soc == nullptr)
+    {}
+    else
+    {
+        QDataStream stream(soc);
+
+        stream << message;
+        bool written = soc->waitForBytesWritten();
+#ifdef QT_DEBUG
+        qDebug() << "Did the socket write? " << written;
+#endif
+        if(written)
+        {
+            soc->disconnectFromServer();
+            soc->close();
+            exit(0);
+        }
+    }
+}
+
+QDataStream &operator<<(QDataStream &out, const LocalMSG &message)
+{
+    out << message.version << (int)message.type << message.percentOfBrightness;
+    return out;
+}
+
+QDataStream &operator>>(QDataStream &in, LocalMSG &message)
+{
+    MessageType type;
+    QString version;
+    double percent;
+    int iType;
+
+    in >> version >> iType >> percent;
+    type = (MessageType)iType;
+    message = LocalMSG(type, percent);
+    message.setVersion(version);
+
+    return in;
+}
+
+LocalMSG::LocalMSG(MessageType mType, double percent)
+{
+    type = mType;
+    percentOfBrightness = percent;
+    version = QApplication::applicationVersion();
 }

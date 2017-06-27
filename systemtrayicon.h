@@ -58,6 +58,8 @@ private:
     QLocalServer *server;
     QStandardItemModel *model;
 //    MainWidget *mWidget;
-};
 
+private slots:
+    void onNewConnection();
+};
 #endif // SYSTEMTRAYICON_H

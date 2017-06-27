@@ -41,4 +41,25 @@ enum class BatteryError {
     NoError
 };
 
+enum class MessageType {
+    BrightnessUp,
+    BrightnessDown,
+    BrightnessSet
+};
+
+struct LocalMSG
+{
+    LocalMSG() {}
+    LocalMSG(MessageType mType, double percent);
+    void setVersion(QString mVersion) {version = mVersion;}
+
+    MessageType type;
+    QString version;
+    double percentOfBrightness;
+};
+
+QDataStream &operator<<(QDataStream &out, const LocalMSG &message);
+QDataStream &operator>>(QDataStream &in, LocalMSG &message);
+
+
 #endif
