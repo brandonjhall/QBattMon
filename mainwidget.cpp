@@ -150,8 +150,6 @@ void MainWidget::onReadyRead()
         decBrightness(message.percentOfBrightness);
         break;
     }
-
-    ui->horizontalSlider->setValue(message.percentOfBrightness * 100);
 }
 
 QDataStream &operator>>(QDataStream &in, LocalMSG &message)

@@ -171,7 +171,11 @@ void BrightnessSlider::incBrightness(double inc)
 
             brightness = brightness / maxBrightness;
             newBrightness = brightness + inc;
-            setBrightness(newBrightness);
+//            setBrightness(newBrightness);
+
+//            blockSignals(true);
+            setValue(newBrightness * 100);
+//            blockSignals(false);
         }
 
         brightnessFile->close();
@@ -191,7 +195,12 @@ void BrightnessSlider::decBrightness(double dec)
 
             brightness = brightness / maxBrightness;
             newBrightness = brightness - dec;
-            setBrightness(newBrightness);
+//            setBrightness(newBrightness);
+
+//            blockSignals(true);
+            int s = newBrightness * 100;
+            setValue(newBrightness * 100);
+//            blockSignals(false);
         }
 
         brightnessFile->close();

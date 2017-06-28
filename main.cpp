@@ -32,6 +32,8 @@
 #include "mainwidget.h"
 #include "battery.h"
 
+#include <QScreen>
+
 static bool showMainWidget = true;
 static bool connectedToServer;
 static QProcessEnvironment env;
@@ -189,7 +191,7 @@ static void handleArguments(const QApplication &app)
         }
 
         if (connectedToServer) {
-            sendMessage(LocalMSG(MessageType::BrightnessUp, parser.value("inc").toDouble()));
+            sendMessage(LocalMSG(MessageType::BrightnessUp, value));
             exit(0);
         } else {
             w->incBrightness(value);
@@ -209,7 +211,7 @@ static void handleArguments(const QApplication &app)
         }
 
         if (connectedToServer) {
-            sendMessage(LocalMSG(MessageType::BrightnessDown, parser.value("inc").toDouble()));
+            sendMessage(LocalMSG(MessageType::BrightnessDown, value));
             exit(0);
         } else {
             w->decBrightness(value);
@@ -253,7 +255,9 @@ static void checkForServer()
                                  + QApplication::applicationVersion()
                                  + "-"
                                  + env.value("USER", "qt")
-                                 + env.value("DISPLAY", ":0.0"));
+                                 + "-"
+                                 + QApplication::primaryScreen()->name());
+//                                 + env.value("DISPLAY", ":0.0"));
     soc = new QLocalSocket;
 
     soc->connectToServer(serverName);
