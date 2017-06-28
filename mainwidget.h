@@ -39,24 +39,30 @@ public:
     explicit MainWidget(QWidget *parent = 0);
     ~MainWidget();
 
-    QStandardItemModel *getModel() const;
     void setModel(QStandardItemModel *value);
+    const QStandardItemModel *getModel() const;
 
-public slots:
+    void setCurrentBrightness(double brightnessPercent);
+    void setBrightness(double brightnessPercent);
+    void incBrightness(double inc);
+    void decBrightness(double dec);
+
     bool setupServer(QString serverName);
 
 signals:
     void selectedBatteryChanged(int selectedBattery);
+    void changeBrightness(double brightnessPercent);
 
 private:
-    Ui::MainWidget *ui;
-    QStandardItemModel *model;
+    const QStandardItemModel *model;
     QDataWidgetMapper *mapper;
     QLocalServer *server;
+    Ui::MainWidget *ui;
 
 private slots:
     void selectBattery();
     void onNewConnection();
+    void onReadyRead();
 };
 
 #endif // MAINWIDGET_H

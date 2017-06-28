@@ -22,6 +22,7 @@
 #include <QStandardItemModel>
 #include <QDataWidgetMapper>
 #include <QMetaProperty>
+#include <QDataStream>
 #include <QSettings>
 
 #include "mainwidget.h"
@@ -34,7 +35,7 @@ MainWidget::MainWidget(QWidget *parent) :
 {
     ui->setupUi(this);
     mapper = new QDataWidgetMapper;
-    ui->brightnessPercent->setText(ui->horizontalSlider->getBrightnessPercent());
+    ui->brightnessPercent->setText(ui->horizontalSlider->getBrightnessString());
 }
 
 MainWidget::~MainWidget()
@@ -42,7 +43,7 @@ MainWidget::~MainWidget()
     delete ui;
 }
 
-QStandardItemModel *MainWidget::getModel() const
+const QStandardItemModel *MainWidget::getModel() const
 {
     return model;
 }
@@ -75,6 +76,21 @@ void MainWidget::setModel(QStandardItemModel *value)
     mapper->toFirst();
 }
 
+void MainWidget::setBrightness(double brightnessPercent)
+{
+    ui->horizontalSlider->setBrightness(brightnessPercent);
+}
+
+void MainWidget::incBrightness(double inc)
+{
+    ui->horizontalSlider->incBrightness(inc);
+}
+
+void MainWidget::decBrightness(double dec)
+{
+    ui->horizontalSlider->decBrightness(dec);
+}
+
 void MainWidget::selectBattery()
 {
     bool ok = false;
@@ -101,10 +117,41 @@ bool MainWidget::setupServer(QString serverName)
     return server->listen(serverName);
 }
 
+void MainWidget::setCurrentBrightness(double brightnessPercent)
+{
+    emit changeBrightness(brightnessPercent);
+}
+
 void MainWidget::onNewConnection()
 {
-    QString string;
+    QLocalSocket *soc = server->nextPendingConnection();
+    connect(soc, &QLocalSocket::readyRead, this, &MainWidget::onReadyRead);
     return;
+}
+
+void MainWidget::onReadyRead()
+{
+    QLocalSocket *soc = (QLocalSocket*)sender();
+    QDataStream stream(soc);
+    LocalMSG message;
+
+    stream >> message;
+
+    switch (message.type) {
+    case MessageType::BrightnessUp:
+        incBrightness(message.percentOfBrightness);
+        break;
+    case MessageType::BrightnessDown:
+        decBrightness(message.percentOfBrightness);
+        break;
+    case MessageType::BrightnessSet:
+        decBrightness(message.percentOfBrightness);
+        break;
+    default:
+        break;
+    }
+
+    ui->horizontalSlider->setValue(message.percentOfBrightness * 100);
 }
 
 QDataStream &operator>>(QDataStream &in, LocalMSG &message)

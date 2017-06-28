@@ -34,6 +34,14 @@ void BrightnessSlider::setPosition(QString brightness)
     setValue(position);
 }
 
+void BrightnessSlider::onChangeBrightness(double brightnessPercent)
+{
+    QString brightness = QString::number(brightnessPercent) + "%";
+    setBrightness(brightnessPercent);
+    setBrightnessString(brightness);
+    setValue(brightnessPercent);
+}
+
 void BrightnessSlider::setMaximum(int max)
 {
     QSlider::setMaximum(max);
@@ -54,8 +62,8 @@ void BrightnessSlider::getBrightness()
             setValue(brightness);
 
             QString percent = QString::number(value()) + "%";
-            setBrightnessPercent(percent);
-            emit brightnessChanged(percent);
+            setBrightnessString(percent);
+            emit brightnessStringChanged(percent);
         }
 
         brightnessFile->close();
@@ -139,12 +147,54 @@ void BrightnessSlider::setBrightness(double brightness)
     XCloseDisplay(dpy);
 }
 
-QString BrightnessSlider::getBrightnessPercent() const
+void BrightnessSlider::incBrightness(double inc)
+{
+    double newBrightness;
+    setFileName("actual_brightness");
+    if(brightnessFile->open(QFile::ReadOnly))
+    {
+        bool ok;
+        QString brightnessStr = brightnessFile->readAll().replace("\n", "");
+        double brightness = brightnessStr.toDouble(&ok);
+
+        if(ok)
+        {
+            brightness = brightness / maxBrightness;
+            newBrightness = brightness + inc;
+            setBrightness(newBrightness);
+        }
+
+        brightnessFile->close();
+    }
+}
+
+void BrightnessSlider::decBrightness(double dec)
+{
+    double newBrightness;
+    setFileName("actual_brightness");
+    if(brightnessFile->open(QFile::ReadOnly))
+    {
+        bool ok;
+        QString brightnessStr = brightnessFile->readAll().replace("\n", "");
+        double brightness = brightnessStr.toDouble(&ok);
+
+        if(ok)
+        {
+            brightness = brightness / maxBrightness;
+            newBrightness = brightness - dec;
+            setBrightness(newBrightness);
+        }
+
+        brightnessFile->close();
+    }
+}
+
+QString BrightnessSlider::getBrightnessString() const
 {
     return brightnessPercent;
 }
 
-void BrightnessSlider::setBrightnessPercent(const QString &value)
+void BrightnessSlider::setBrightnessString(const QString &value)
 {
     brightnessPercent = value;
 }
@@ -155,6 +205,6 @@ void BrightnessSlider::onValueChanged(double value)
     double dbl = value / 100.0;
     setBrightness(dbl);
 
-    setBrightnessPercent(brightness);
-    emit brightnessChanged(brightness);
+    setBrightnessString(brightness);
+    emit brightnessStringChanged(brightness);
 }

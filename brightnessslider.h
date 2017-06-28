@@ -12,21 +12,24 @@ public:
     explicit BrightnessSlider(QWidget *parent = nullptr);
     BrightnessSlider(Qt::Orientation orientation, QWidget *parent);
 
-    QString getBrightnessPercent() const;
+    QString getBrightnessString() const;
+    void setBrightness(double brightness);
+    void incBrightness(double inc);
+    void decBrightness(double dec);
 
 signals:
-    void brightnessChanged(QString brightness);
+    void brightnessStringChanged(QString brightness);
 
 public slots:
     void setPosition(QString brightness);
+    void onChangeBrightness(double brightnessPercent);
 
 private:
-    void setBrightnessPercent(const QString &value);
+    void setBrightnessString(const QString &value);
     void setMaximum(int max);
     void getBrightness();
     void getMaxBrightness();
     void setFileName(QString fileName);
-    void setBrightness(double brightness);
 
     double dblBrightness;
     double maxBrightness;

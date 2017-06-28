@@ -17,23 +17,20 @@
  *   along with QBattMon. If not, see <http://www.gnu.org/licenses/>.      *
  **************************************************************************/
 
-#include <QtNetwork/QLocalServer>
+#include <stdlib.h>
+
 #include <QtNetwork/QLocalSocket>
 #include <QProcessEnvironment>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
 #include <QApplication>
 #include <QSettings>
-#include <QIcon>
-
-#include <stdlib.h>
+#include <QDebug>
 
 #include "systemtrayicon.h"
 #include "globalheader.h"
 #include "mainwidget.h"
 #include "battery.h"
-
-#include <QDebug>
 
 static bool showMainWidget = true;
 static bool connectedToServer;
@@ -52,20 +49,22 @@ static void checkForServer();
 static void writeConfig();
 static void readConfig();
 
-//extern MainWidget *mainWidget()
-//{
-//    return w;
-//}
-
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    soc = nullptr;
     env = QProcessEnvironment::systemEnvironment();
+    soc = nullptr;
+    w = nullptr;
 
     configureApplication(a);
     checkForServer();
     handleArguments(a);
+
+    if(connectedToServer)
+    {
+        qWarning("Application already running.");
+        exit(1);
+    }
 
     tray = new SystemTrayIcon;
     battery = new Battery;
@@ -138,12 +137,16 @@ static void handleArguments(const QApplication &app)
     QCommandLineOption incBrightness(QStringList() << "i" << "inc",
                                      QCoreApplication::translate("main", "Increment backlight brightness by <percentage>"),
                                      "percentage");
+    QCommandLineOption decBrightness(QStringList() << "d" << "dec",
+                                     QCoreApplication::translate("main", "Decrement backlight brightness by <percentage>"),
+                                     "percentage");
     QCommandLineOption trayOnly(QStringList() << "t" << "tray",
                                 QCoreApplication::translate("main", "Start application in the tray only."));
 
     parser.setApplicationDescription("CLI usage for QBattMon");
     parser.addOption(setBrightness);
     parser.addOption(incBrightness);
+    parser.addOption(decBrightness);
     parser.addOption(trayOnly);
     parser.addVersionOption();
     parser.addHelpOption();
@@ -152,17 +155,80 @@ static void handleArguments(const QApplication &app)
     if(parser.isSet("tray"))
         showMainWidget = false;
 
-    if(connectedToServer)
+    if(parser.isSet("set"))
     {
-        if(parser.isSet("set"))
+        bool ok;
+        QString valueStr = parser.value("set");
+        double value = valueStr.toDouble(&ok);
+
+        if(ok)
         {
-            sendMessage(LocalMSG(MessageType::BrightnessSet, parser.value("set").toDouble()));
-            exit(0);
+            if(value > 1)
+            {
+                value = value / 100.0;
+            }
         }
 
-        if(parser.isSet("inc"))
+        if(connectedToServer)
+        {
+            sendMessage(LocalMSG(MessageType::BrightnessSet, value));
+            exit(0);
+        }
+        else
+        {
+            w->setBrightness(value);
+            exit(0);
+        }
+    }
+
+    if(parser.isSet("inc"))
+    {
+        bool ok;
+        QString valueStr = parser.value("inc");
+        double value = valueStr.toDouble(&ok);
+
+        if(ok)
+        {
+            if(value > 1)
+            {
+                value = value / 100.0;
+            }
+        }
+
+        if(connectedToServer)
         {
             sendMessage(LocalMSG(MessageType::BrightnessUp, parser.value("inc").toDouble()));
+            exit(0);
+        }
+        else
+        {
+            w->incBrightness(value);
+            exit(0);
+        }
+    }
+
+    if(parser.isSet("dec"))
+    {
+        bool ok;
+        QString valueStr = parser.value("dec");
+        double value = valueStr.toDouble(&ok);
+
+        if(ok)
+        {
+            if(value > 1)
+            {
+                value = value / 100.0;
+            }
+        }
+
+        if(connectedToServer)
+        {
+            sendMessage(LocalMSG(MessageType::BrightnessDown, parser.value("inc").toDouble()));
+            exit(0);
+        }
+        else
+        {
+            w->decBrightness(value);
             exit(0);
         }
     }
@@ -197,7 +263,12 @@ static void readBatteryError(QString error, BatteryError errorType)
 
 static void checkForServer()
 {
-    QString serverName = QApplication::applicationName() + "-" + QApplication::applicationVersion() + "-" + env.value("USER", "qt");
+    QString serverName = QString(QApplication::applicationName()
+                                 + "-"
+                                 + QApplication::applicationVersion()
+                                 + "-"
+                                 + env.value("USER", "qt")
+                                 + env.value("DISPLAY", ":0.0"));
     soc = new QLocalSocket;
 
     soc->connectToServer(serverName);
@@ -218,6 +289,8 @@ static void checkForServer()
             soc = nullptr;
         }
     }
+
+    qDebug() << "Server name: " << serverName;
 }
 
 void sendMessage(LocalMSG message)

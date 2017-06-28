@@ -25,7 +25,7 @@
 #include "globalheader.h"
 
 class QStandardItemModel;
-class MainWidget;
+
 class SystemTrayIcon : public QSystemTrayIcon
 {
     Q_OBJECT
@@ -34,9 +34,8 @@ public:
     SystemTrayIcon(const QIcon &icon, QObject *parent = nullptr);
     SystemTrayIcon(QObject *parent = nullptr);
 
-    QStandardItemModel *getModel() const;
-    void setModel(QStandardItemModel *value);
-
+    const QStandardItemModel *getModel() const;
+    void setModel(const QStandardItemModel *value);
     int getCapacity() const;
 
 public slots:
@@ -52,8 +51,7 @@ private:
     QString statusStr;
     QString toolTipStr;
     QString capacityStr;
-    QStandardItemModel *model;
-//    MainWidget *mWidget;
+    const QStandardItemModel *model;
 
 private slots:
 };

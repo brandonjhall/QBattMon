@@ -359,8 +359,9 @@
    <extends>QSlider</extends>
    <header>brightnessslider.h</header>
    <slots>
-    <signal>brightnessChanged(QString)</signal>
+    <signal>brightnessStringChanged(QString)</signal>
     <slot>setPosition(QString)</slot>
+    <slot>onChangeBrightness(double)</slot>
    </slots>
   </customwidget>
  </customwidgets>
@@ -368,7 +369,7 @@
  <connections>
   <connection>
    <sender>horizontalSlider</sender>
-   <signal>brightnessChanged(QString)</signal>
+   <signal>brightnessStringChanged(QString)</signal>
    <receiver>brightnessPercent</receiver>
    <slot>setText(QString)</slot>
    <hints>
@@ -377,13 +378,30 @@
      <y>238</y>
     </hint>
     <hint type="destinationlabel">
-     <x>385</x>
-     <y>232</y>
+     <x>480</x>
+     <y>238</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>MainWidget</sender>
+   <signal>changeBrightness(double)</signal>
+   <receiver>horizontalSlider</receiver>
+   <slot>onChangeBrightness(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>451</x>
+     <y>2</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>323</x>
+     <y>220</y>
     </hint>
    </hints>
   </connection>
  </connections>
  <slots>
+  <signal>changeBrightness(double)</signal>
   <slot>selectBattery()</slot>
  </slots>
 </ui>
