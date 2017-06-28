@@ -60,26 +60,23 @@ int main(int argc, char *argv[])
     checkForServer();
     handleArguments(a);
 
-    if(connectedToServer)
-    {
+    if (connectedToServer) {
         qWarning("Application already running.");
         exit(1);
     }
 
     tray = new SystemTrayIcon;
     battery = new Battery;
-    int exitCode;
 
-    tray->setModel(battery->getModel());
-    w->setModel(battery->getModel());
+    tray->setModel(battery->model());
+    w->setModel(battery->model());
 
-    if(showMainWidget)
-    {
+    if (showMainWidget) {
         tray->show();
         w->show();
-    }
-    else
+    } else {
         tray->show();
+    }
 
     QObject::connect(battery, &Battery::batteryStatusChanged, tray, &SystemTrayIcon::onStatusChanged);
     QObject::connect(battery, &Battery::batteryCapacityChanged, tray, &SystemTrayIcon::setCapacity);
@@ -91,8 +88,12 @@ int main(int argc, char *argv[])
 
     qDebug() << "User: " << env.value("USER", "qt");
     qDebug() << "Display: " << env.value("DISPLAY", ":0.0");
+
     readConfig();
+
+    int exitCode;
     exitCode = a.exec();
+
     writeConfig();
 
     return exitCode;
@@ -106,13 +107,13 @@ static void readConfig()
 
     batteryNumber = settings.value("battery/number", 0).toInt(&ok);
 
-    if(ok)
+    if (ok)
         battery->setBatteryNumber(batteryNumber);
 }
 
 static void writeConfig()
 {
-    int batteryNumber = battery->getBatteryNumber();
+    int batteryNumber = battery->batteryNumber();
     QSettings settings;
 
     settings.setValue("battery/number", batteryNumber);
@@ -121,6 +122,7 @@ static void writeConfig()
 static void configureApplication(const QApplication &app)
 {
     QIcon::setThemeName("Adwaita");
+
     app.setQuitOnLastWindowClosed(false);
     app.setApplicationName("QBattMon");
     app.setOrganizationName("BrandonSoft");
@@ -129,8 +131,6 @@ static void configureApplication(const QApplication &app)
 
 static void handleArguments(const QApplication &app)
 {
-    QCommandLineParser parser;
-
     QCommandLineOption setBrightness(QStringList() << "s" << "set",
                                      QCoreApplication::translate("main", "Set backlight brightness to <percentage>"),
                                      "percentage");
@@ -143,6 +143,8 @@ static void handleArguments(const QApplication &app)
     QCommandLineOption trayOnly(QStringList() << "t" << "tray",
                                 QCoreApplication::translate("main", "Start application in the tray only."));
 
+    QCommandLineParser parser;
+
     parser.setApplicationDescription("CLI usage for QBattMon");
     parser.addOption(setBrightness);
     parser.addOption(incBrightness);
@@ -152,82 +154,64 @@ static void handleArguments(const QApplication &app)
     parser.addHelpOption();
     parser.process(app);
 
-    if(parser.isSet("tray"))
+    if (parser.isSet("tray"))
         showMainWidget = false;
 
-    if(parser.isSet("set"))
-    {
+    if (parser.isSet("set")) {
         bool ok;
         QString valueStr = parser.value("set");
         double value = valueStr.toDouble(&ok);
 
-        if(ok)
-        {
-            if(value > 1)
-            {
+        if (ok) {
+            if (value > 1) {
                 value = value / 100.0;
             }
         }
 
-        if(connectedToServer)
-        {
+        if (connectedToServer) {
             sendMessage(LocalMSG(MessageType::BrightnessSet, value));
             exit(0);
-        }
-        else
-        {
+        } else {
             w->setBrightness(value);
             exit(0);
         }
     }
 
-    if(parser.isSet("inc"))
-    {
+    if (parser.isSet("inc")) {
         bool ok;
         QString valueStr = parser.value("inc");
         double value = valueStr.toDouble(&ok);
 
-        if(ok)
-        {
-            if(value > 1)
-            {
+        if (ok) {
+            if (value > 1) {
                 value = value / 100.0;
             }
         }
 
-        if(connectedToServer)
-        {
+        if (connectedToServer) {
             sendMessage(LocalMSG(MessageType::BrightnessUp, parser.value("inc").toDouble()));
             exit(0);
-        }
-        else
-        {
+        } else {
             w->incBrightness(value);
             exit(0);
         }
     }
 
-    if(parser.isSet("dec"))
-    {
+    if (parser.isSet("dec")) {
         bool ok;
         QString valueStr = parser.value("dec");
         double value = valueStr.toDouble(&ok);
 
-        if(ok)
-        {
-            if(value > 1)
-            {
+        if (ok) {
+            if (value > 1) {
                 value = value / 100.0;
             }
         }
 
-        if(connectedToServer)
-        {
+        if (connectedToServer) {
             sendMessage(LocalMSG(MessageType::BrightnessDown, parser.value("inc").toDouble()));
             exit(0);
-        }
-        else
-        {
+        } else {
             w->decBrightness(value);
             exit(0);
         }
@@ -238,7 +222,7 @@ static void onTrayActivated(QSystemTrayIcon::ActivationReason reason)
 {
     switch (reason) {
     case QSystemTrayIcon::Trigger:
-        if(w->isVisible())
+        if (w->isVisible())
             w->close();
         else
             w->show();
@@ -251,6 +235,7 @@ static void onTrayActivated(QSystemTrayIcon::ActivationReason reason)
 static void readBatteryError(QString error, BatteryError errorType)
 {
     qDebug() << "Error Text: " << error;
+
     switch (errorType) {
     case BatteryError::NoBattery:
         qDebug() << "Error Type: " << "NoBattery";
@@ -272,17 +257,13 @@ static void checkForServer()
     soc = new QLocalSocket;
 
     soc->connectToServer(serverName);
-    if(soc->waitForConnected())
-    {
+    if (soc->waitForConnected()) {
         connectedToServer = true;
         qDebug() << "Connected";
-    }
-    else
-    {
+    } else {
         connectedToServer = false;
         w = new MainWidget;
-        if(w->setupServer(serverName))
-        {
+        if (w->setupServer(serverName)) {
             qDebug() << soc->errorString();
             qDebug() << "Started server...";
             soc->close();
@@ -300,8 +281,8 @@ void sendMessage(LocalMSG message)
     stream << message;
     bool written = soc->waitForBytesWritten();
     qDebug() << "Did the socket write? " << written;
-    if(written)
-    {
+
+    if (written) {
         soc->disconnectFromServer();
         soc->close();
     }
@@ -309,7 +290,7 @@ void sendMessage(LocalMSG message)
 
 QDataStream &operator<<(QDataStream &out, const LocalMSG &message)
 {
-    out << message.version << (int)message.type << message.percentOfBrightness;
+    out << message.version << static_cast<int>(message.type) << message.percentOfBrightness;
     return out;
 }
 

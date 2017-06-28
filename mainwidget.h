@@ -20,8 +20,8 @@
 #ifndef MAINWIDGET_H
 #define MAINWIDGET_H
 
-#include <QWidget>
 #include <QItemDelegate>
+#include <QWidget>
 
 class QStandardItemModel;
 class QDataWidgetMapper;
@@ -34,20 +34,19 @@ class MainWidget;
 class MainWidget : public QWidget
 {
     Q_OBJECT
-
 public:
     explicit MainWidget(QWidget *parent = 0);
     ~MainWidget();
 
-    void setModel(QStandardItemModel *value);
     const QStandardItemModel *getModel() const;
+    void setModel(QStandardItemModel *value);
+
+    bool setupServer(QString serverName);
 
     void setCurrentBrightness(double brightnessPercent);
     void setBrightness(double brightnessPercent);
     void incBrightness(double inc);
     void decBrightness(double dec);
-
-    bool setupServer(QString serverName);
 
 signals:
     void selectedBatteryChanged(int selectedBattery);
@@ -60,8 +59,8 @@ private:
     Ui::MainWidget *ui;
 
 private slots:
-    void selectBattery();
     void onNewConnection();
+    void selectBattery();
     void onReadyRead();
 };
 
@@ -75,11 +74,9 @@ class ComboBoxDelegate : public QItemDelegate
     Q_OBJECT
 public:
     ComboBoxDelegate(QObject *parent = 0);
-    void setEditorData(QWidget *editor,
-                       const QModelIndex &index) const;
-    void setModelData(QWidget *editor,
-                      QAbstractItemModel *model,
-                      const QModelIndex &index) const;
+
+    void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const;
+    void setEditorData(QWidget *editor, const QModelIndex &index) const;
 };
 
 #endif

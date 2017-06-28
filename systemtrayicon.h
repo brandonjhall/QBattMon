@@ -21,7 +21,6 @@
 #define SYSTEMTRAYICON_H
 
 #include <QSystemTrayIcon>
-
 #include "globalheader.h"
 
 class QStandardItemModel;
@@ -29,14 +28,14 @@ class QStandardItemModel;
 class SystemTrayIcon : public QSystemTrayIcon
 {
     Q_OBJECT
-
 public:
     SystemTrayIcon(const QIcon &icon, QObject *parent = nullptr);
     SystemTrayIcon(QObject *parent = nullptr);
 
-    const QStandardItemModel *getModel() const;
     void setModel(const QStandardItemModel *value);
-    int getCapacity() const;
+    const QStandardItemModel *model() const;
+
+    int capacity() const;
 
 public slots:
     void onBatteryError(QString error, BatteryError batteryError);
@@ -47,12 +46,12 @@ public slots:
 private:
     void createMenu();
 
-    int capacity;
-    QString statusStr;
-    QString toolTipStr;
-    QString capacityStr;
-    const QStandardItemModel *model;
+    int m_capacity;
 
-private slots:
+    QString capacityStr;
+    QString toolTipStr;
+    QString statusStr;
+
+    const QStandardItemModel *m_model;
 };
 #endif // SYSTEMTRAYICON_H

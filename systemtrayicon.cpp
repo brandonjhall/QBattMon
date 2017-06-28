@@ -58,8 +58,8 @@ void SystemTrayIcon::createMenu()
 
 void SystemTrayIcon::updateIcon()
 {
-    BatteryStatus status = static_cast<BatteryStatus>(model->item(0, 4)->data(Qt::UserRole).toInt());
-    BatteryLevel level = static_cast<BatteryLevel>(model->item(0, 6)->data(Qt::UserRole).toInt());
+    BatteryStatus status = static_cast<BatteryStatus>(m_model->item(0, 4)->data(Qt::UserRole).toInt());
+    BatteryLevel level = static_cast<BatteryLevel>(m_model->item(0, 6)->data(Qt::UserRole).toInt());
     QString newIconName;
 
     switch (status) {
@@ -81,15 +81,15 @@ void SystemTrayIcon::updateIcon()
             newIconName = "battery-full-charging";
             break;
         case BatteryLevel::Normal:
-            if(capacity >= 90)
+            if (m_capacity >= 90)
                 newIconName = "battery-full-charging";
-            else if(capacity >= 45)
+            else if (m_capacity >= 45)
                 newIconName = "battery-good-charging";
             else
                 newIconName = "battery-low-charging";
             break;
         case BatteryLevel::Low:
-            if(capacity >= 10)
+            if (m_capacity >= 10)
                 newIconName = "battery-low-charging";
             else
                 newIconName = "battery-caution-charging";
@@ -102,15 +102,15 @@ void SystemTrayIcon::updateIcon()
             newIconName = "battery-full";
             break;
         case BatteryLevel::Normal:
-            if(capacity >= 90)
+            if (m_capacity >= 90)
                 newIconName = "battery-full";
-            else if(capacity >= 45)
+            else if (m_capacity >= 45)
                 newIconName = "battery-good";
             else
                 newIconName = "battery-low";
             break;
         case BatteryLevel::Low:
-            if(capacity >= 6)
+            if (m_capacity >= 6)
                 newIconName = "battery-caution";
             else
                 newIconName = "battery-empty";
@@ -119,26 +119,20 @@ void SystemTrayIcon::updateIcon()
         break;
     }
 
-    if(newIconName != icon().name())
-    {
+    if (newIconName != icon().name()) {
         QStringList warnings = QStringList() << "battery-low" << "battery-caution" << "battery-empty";
         QSystemTrayIcon::MessageIcon msgIcon = QSystemTrayIcon::Information;
         QString message;
         QString title;
 
-        if(newIconName == "battery-low")
-        {
+        if (newIconName == "battery-low") {
             message = "Battery is low";
             title = "Caution:";
-        }
-        else if(newIconName == "battery-caution")
-        {
+        } else if(newIconName == "battery-caution") {
             message = "Battery is almost empty";
             msgIcon = QSystemTrayIcon::Warning;
             title = "Warning:";
-        }
-        else if(newIconName == "battery-empty")
-        {
+        } else if(newIconName == "battery-empty") {
             msgIcon = QSystemTrayIcon::Critical;
             message = "Battery is empty!";
             title = "CRITICAL:";
@@ -151,9 +145,9 @@ void SystemTrayIcon::updateIcon()
     }
 }
 
-int SystemTrayIcon::getCapacity() const
+int SystemTrayIcon::capacity() const
 {
-    return capacity;
+    return m_capacity;
 }
 
 void SystemTrayIcon::onStatusChanged(BatteryStatus status)
@@ -169,9 +163,7 @@ void SystemTrayIcon::onStatusChanged(BatteryStatus status)
         break;
     case BatteryStatus::Discharging:
         statusStr = "Discharging battery";
-        showMessage(statusStr, QString("Time Remaining: " + model->item(0, 12)->text()), QSystemTrayIcon::Information, 3000);
-        break;
-    default:
+        showMessage(statusStr, QString("Time Remaining: " + m_model->item(0, 12)->text()), QSystemTrayIcon::Information, 3000);
         break;
     }
 
@@ -181,19 +173,19 @@ void SystemTrayIcon::onStatusChanged(BatteryStatus status)
 
 void SystemTrayIcon::setCapacity(int value)
 {
-    capacity = value;
     capacityStr = QString::number(value) + "%";
-    toolTipStr = statusStr + "\nBattery Level: " + capacityStr;
+    m_capacity = value;
 
+    toolTipStr = statusStr + "\nBattery Level: " + capacityStr;
     setToolTip(toolTipStr);
 }
 
-const QStandardItemModel *SystemTrayIcon::getModel() const
+const QStandardItemModel *SystemTrayIcon::model() const
 {
-    return model;
+    return m_model;
 }
 
 void SystemTrayIcon::setModel(const QStandardItemModel *value)
 {
-    model = value;
+    m_model = value;
 }

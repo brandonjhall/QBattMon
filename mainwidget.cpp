@@ -33,9 +33,10 @@ MainWidget::MainWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MainWidget)
 {
-    ui->setupUi(this);
     mapper = new QDataWidgetMapper;
-    ui->brightnessPercent->setText(ui->horizontalSlider->getBrightnessString());
+
+    ui->setupUi(this);
+    ui->brightnessPercent->setText(ui->horizontalSlider->brightnessString());
 }
 
 MainWidget::~MainWidget()
@@ -52,14 +53,15 @@ void MainWidget::setModel(QStandardItemModel *value)
 {
     model = value;
 
-    for(int i = 0; i < model->rowCount(); i++) {
+    for (int i = 0; i < model->rowCount(); i++) {
         QString itemString = model->item(i)->data(Qt::DisplayRole).toString();
         ui->comboBox->addItem(itemString);
     }
 
-    mapper->clearMapping();
-    mapper->setModel(value);
     mapper->setItemDelegate(new ComboBoxDelegate(this));
+
+    mapper->setModel(value);
+
     mapper->addMapping(ui->comboBox, 0);
     mapper->addMapping(ui->technology, 1);
     mapper->addMapping(ui->type, 2);
@@ -73,6 +75,7 @@ void MainWidget::setModel(QStandardItemModel *value)
     mapper->addMapping(ui->model_name, 10);
     mapper->addMapping(ui->serial_number, 11);
     mapper->addMapping(ui->time_remaining, 12);
+
     mapper->toFirst();
 }
 
@@ -93,13 +96,13 @@ void MainWidget::decBrightness(double dec)
 
 void MainWidget::selectBattery()
 {
-    bool ok = false;
     QString batteryName = ui->comboBox->currentText();
     QString batteryNumberStr = batteryName.at(batteryName.size() - 1);
+
+    bool ok = false;
     int batteryNumber = batteryNumberStr.toInt(&ok);
 
-    if(ok)
-    {
+    if (ok) {
         QSettings settings;
 
         settings.setValue("battery/number", batteryNumber);
@@ -111,9 +114,9 @@ bool MainWidget::setupServer(QString serverName)
 {
     server = new QLocalServer;
 
-//    server->removeServer(serverName);
     server->setSocketOptions(QLocalServer::UserAccessOption);
     connect(server, &QLocalServer::newConnection, this, &MainWidget::onNewConnection);
+
     return server->listen(serverName);
 }
 
@@ -126,7 +129,6 @@ void MainWidget::onNewConnection()
 {
     QLocalSocket *soc = server->nextPendingConnection();
     connect(soc, &QLocalSocket::readyRead, this, &MainWidget::onReadyRead);
-    return;
 }
 
 void MainWidget::onReadyRead()
@@ -147,8 +149,6 @@ void MainWidget::onReadyRead()
     case MessageType::BrightnessSet:
         decBrightness(message.percentOfBrightness);
         break;
-    default:
-        break;
     }
 
     ui->horizontalSlider->setValue(message.percentOfBrightness * 100);
@@ -162,17 +162,14 @@ QDataStream &operator>>(QDataStream &in, LocalMSG &message)
     int iType;
 
     in >> version >> iType >> percent;
-    type = (MessageType)iType;
+    type = static_cast<MessageType>(iType);
     message = LocalMSG(type, percent);
     message.setVersion(version);
 
     return in;
 }
 
-ComboBoxDelegate::ComboBoxDelegate(QObject *parent) : QItemDelegate(parent)
-{
-
-}
+ComboBoxDelegate::ComboBoxDelegate(QObject *parent) : QItemDelegate(parent) {}
 
 void ComboBoxDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
 {

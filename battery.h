@@ -21,69 +21,74 @@
 #define BATTERY_H
 
 #include <QObject>
-
 #include "globalheader.h"
 
-class QTime;
-class QTimer;
-class QFile;
 class QStandardItemModel;
+class QTimer;
+class QTime;
+class QFile;
 
 class Battery : public QObject
 {
     Q_OBJECT
 public:
-    explicit Battery(QObject *parent = nullptr);
     Battery(int battery, QObject *parent = nullptr);
+    explicit Battery(QObject *parent = nullptr);
 
-    int getBatteryNumber() const;
+    QStandardItemModel *model() const;
+
+    QString currentEnergy() const;
+    QString currentPower() const;
+
     BatteryStatus getStatus() const;
-    QStandardItemModel *getModel() const;
-    QString getLevel() const;
-    QString getCurrentPower() const;
-    QString getCurrentEnergy() const;
-    QTime *getTimeLeft() const;
+    int batteryNumber() const;
+    QTime *timeLeft() const;
+    QString level() const;
 
 signals:
     void batteryError(QString error, BatteryError batteryError);
-    void batteryNumberChanged(int number);
-    void batteryCapacityChanged(int level);
     void batteryStatusChanged(BatteryStatus status);
+    void batteryCapacityChanged(int m_level);
+    void batteryNumberChanged(int number);
     void filesUpdated();
 
 public slots:
     void setBatteryNumber(int value);
 
 private:
-    void calculateTimeRemaining();
     QTime *calculateTimeRemaining(int energy, int usage);
-    void initializeVariables();
-    void setBatteryCapacity(int value);
-    void setStatus(const BatteryStatus &value);
-    void setLevel(const QString &value);
     void setCurrentEnergy(const QString &value);
     void setCurrentPower(const QString &value);
+    void setStatus(const BatteryStatus &value);
+    void setLevel(const QString &value);
+    void setBatteryCapacity(int value);
+    void calculateTimeRemaining();
+    void initializeVariables();
     void createModel();
 
-    int batteryNumber;
-    int batteryCapacityNumber;
-    int maxEnergy;
+    int m_batteryCapacityNumber;
+    int m_batteryNumber;
+    int m_maxEnergy;
     int energy;
     int usage;
-    QString level;
-    QString currentPower;
-    QString currentEnergy;
-    QFile *batteryCapacity;
-    QFile *batteryLevel;
-    QFile *batteryStatus;
-    QFile *batteryCurrentPower;
+
+    QString m_currentEnergy;
+    QString m_currentPower;
+    QString m_level;
+
     QFile *batteryCurrentEnergy;
-    QTime *timeLeft;
-    QTimer *updateTimer;
-    QStringList batteryFolders;
+    QFile *batteryCurrentPower;
+    QFile *batteryCapacity;
+    QFile *batteryStatus;
+    QFile *batteryLevel;
+
+    QStandardItemModel *m_model;
+
     BatteryError lastError = BatteryError::NoError;
+    QStringList batteryFolders;
     BatteryStatus status;
-    QStandardItemModel *model;
+    QTimer *updateTimer;
+    QTime *m_timeLeft;
 
 private slots:
     void updateFiles();
