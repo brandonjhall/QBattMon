@@ -147,7 +147,7 @@ void MainWidget::onReadyRead()
         decBrightness(message.percentOfBrightness);
         break;
     case MessageType::BrightnessSet:
-        decBrightness(message.percentOfBrightness);
+        setBrightness(message.percentOfBrightness);
         break;
     }
 }
