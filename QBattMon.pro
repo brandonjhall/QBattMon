@@ -50,7 +50,8 @@ DISTFILES += \
 
 LIBS += -lX11 \
         -lXrandr \
-        -lutil
+        -lutil \
+        -ludev
 
 DEFINES += QT_NO_DEBUG_OUTPUT
 
