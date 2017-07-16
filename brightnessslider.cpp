@@ -157,50 +157,43 @@ void BrightnessSlider::setBrightness(double brightness)
     XCloseDisplay(dpy);
 }
 
-void BrightnessSlider::incBrightness(double inc)
+void BrightnessSlider::incBrightness(float inc)
 {
     setFileName("actual_brightness");
     if (brightnessFile->open(QFile::ReadOnly)) {
         QString brightnessStr = brightnessFile->readAll().replace("\n", "");
 
         bool ok;
-        double brightness = brightnessStr.toDouble(&ok);
+        float brightness = brightnessStr.toFloat(&ok);
 
         if (ok) {
-            double newBrightness;
+            float newBrightness;
 
             brightness = brightness / maxBrightness;
             newBrightness = brightness + inc;
-//            setBrightness(newBrightness);
-
-//            blockSignals(true);
-            setValue(newBrightness * 100);
-//            blockSignals(false);
+            int sliderValue = newBrightness * 100;
+            setValue(sliderValue);
         }
 
         brightnessFile->close();
     }
 }
 
-void BrightnessSlider::decBrightness(double dec)
+void BrightnessSlider::decBrightness(float dec)
 {
     setFileName("actual_brightness");
     if (brightnessFile->open(QFile::ReadOnly)) {
         bool ok;
         QString brightnessStr = brightnessFile->readAll().replace("\n", "");
-        double brightness = brightnessStr.toDouble(&ok);
+        float brightness = brightnessStr.toFloat(&ok);
 
         if (ok) {
-            double newBrightness;
+            float newBrightness;
 
             brightness = brightness / maxBrightness;
             newBrightness = brightness - dec;
-//            setBrightness(newBrightness);
-
-//            blockSignals(true);
-            int s = newBrightness * 100;
-            setValue(newBrightness * 100);
-//            blockSignals(false);
+            int sliderValue = newBrightness * 100;
+            setValue(sliderValue);
         }
 
         brightnessFile->close();

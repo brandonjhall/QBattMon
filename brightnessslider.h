@@ -15,8 +15,8 @@ public:
     QString brightnessString() const;
 
     void setBrightness(double brightness);
-    void incBrightness(double inc);
-    void decBrightness(double dec);
+    void incBrightness(float inc);
+    void decBrightness(float dec);
 
 signals:
     void brightnessStringChanged(QString brightness);

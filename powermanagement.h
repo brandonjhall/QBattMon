@@ -17,74 +17,28 @@
  *   along with QBattMon. If not, see <http://www.gnu.org/licenses/>.      *
  **************************************************************************/
 
-#ifndef MAINWIDGET_H
-#define MAINWIDGET_H
+#ifndef POWERMANAGEMENT_H
+#define POWERMANAGEMENT_H
 
-#include <QItemDelegate>
-#include <QWidget>
+#include <QObject>
 
-class QStandardItemModel;
-class PowerManagement;
-class QDataWidgetMapper;
-class QLocalServer;
-
-namespace Ui {
-class MainWidget;
-}
-
-class MainWidget : public QWidget
+class PowerManagement : public QObject
 {
     Q_OBJECT
+
 public:
-    explicit MainWidget(QWidget *parent = 0);
-    ~MainWidget();
-
-    const QStandardItemModel *getModel() const;
-    void setModel(QStandardItemModel *value);
-
-    bool setupServer(QString serverName);
-
-    void setCurrentBrightness(double brightnessPercent);
-    void setBrightness(double brightnessPercent);
-    void incBrightness(double inc);
-    void decBrightness(double dec);
+    explicit PowerManagement(QObject *parent = 0);
+    ~PowerManagement();
 
 public slots:
-    void suspend();
     void hibernate();
+    void suspend();
 
 signals:
-    void selectedBatteryChanged(int selectedBattery);
-    void changeBrightness(double brightnessPercent);
 
 private:
-    bool eventFilter(QObject *watched, QEvent *event);
-    const QStandardItemModel *model;
-
-    PowerManagement *powerManagement;
-    QDataWidgetMapper *mapper;
-    QLocalServer *server;
-    Ui::MainWidget *ui;
-
-private slots:
-    void onNewConnection();
-    void selectBattery();
-    void onReadyRead();
+    void dbusSuspend();
+    void dbusHibernate();
 };
 
-#endif // MAINWIDGET_H
-
-#ifndef COMBOBOX_DELEGATE
-#define COMBOBOX_DELEGATE
-
-class ComboBoxDelegate : public QItemDelegate
-{
-    Q_OBJECT
-public:
-    ComboBoxDelegate(QObject *parent = 0);
-
-    void setModelData(QWidget *editor, QAbstractItemModel *model, const QModelIndex &index) const;
-    void setEditorData(QWidget *editor, const QModelIndex &index) const;
-};
-
-#endif
+#endif // POWERMANAGEMENT_H

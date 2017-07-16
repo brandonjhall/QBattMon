@@ -17,45 +17,51 @@
  *   along with QBattMon. If not, see <http://www.gnu.org/licenses/>.      *
  **************************************************************************/
 
-#ifndef SYSTEMTRAYICON_H
-#define SYSTEMTRAYICON_H
+#include <QtDBus/QDBusConnection>
+#include <QtDBus/QDBusMessage>
 
-#include <QSystemTrayIcon>
-#include "globalheader.h"
+#include "powermanagement.h"
+#include <unistd.h>
+#include <QDebug>
+#include <pty.h>
 
-class QStandardItemModel;
-
-class SystemTrayIcon : public QSystemTrayIcon
+PowerManagement::PowerManagement(QObject *parent) :
+    QObject(parent)
 {
-    Q_OBJECT
-public:
-    SystemTrayIcon(const QIcon &icon, QObject *parent = nullptr);
-    SystemTrayIcon(QObject *parent = nullptr);
+}
 
-    void setModel(const QStandardItemModel *value);
-    const QStandardItemModel *model() const;
+PowerManagement::~PowerManagement()
+{
+}
 
-    int capacity() const;
+void PowerManagement::hibernate()
+{
+    dbusHibernate();
+}
 
-signals:
-    void suspend();
-    void hibernate();
+void PowerManagement::suspend()
+{
+    dbusSuspend();
+}
 
-public slots:
-    void onBatteryError(QString error, BatteryError batteryError);
-    void onStatusChanged(BatteryStatus status);
-    void setCapacity(int value);
-    void updateIcon();
+void PowerManagement::dbusSuspend()
+{
+    QDBusConnection connect = QDBusConnection::systemBus();
+    QDBusMessage message = QDBusMessage::createMethodCall("org.freedesktop.UPower",
+                                                          "/org/freedesktop/UPower",
+                                                          "org.freedesktop.UPower",
+                                                          "Suspend");
 
-private:
-    void createMenu();
+    connect.call(message, QDBus::NoBlock);
+}
 
-    int m_capacity;
+void PowerManagement::dbusHibernate()
+{
+    QDBusConnection connect = QDBusConnection::systemBus();
+    QDBusMessage message = QDBusMessage::createMethodCall("org.freedesktop.UPower",
+                                                          "/org/freedesktop/UPower",
+                                                          "org.freedesktop.UPower",
+                                                          "Hibernate");
 
-    QString capacityStr;
-    QString toolTipStr;
-    QString statusStr;
-
-    const QStandardItemModel *m_model;
-};
-#endif // SYSTEMTRAYICON_H
+    connect.call(message, QDBus::NoBlock);
+}

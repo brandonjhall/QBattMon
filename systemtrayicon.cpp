@@ -19,6 +19,7 @@
 
 #include <QStandardItemModel>
 #include <QApplication>
+#include <QWheelEvent>
 #include <QMenu>
 
 #include "systemtrayicon.h"
@@ -51,8 +52,11 @@ void SystemTrayIcon::createMenu()
 {
     QMenu *menu = new QMenu(QApplication::applicationName());
 
+    menu->addAction(QIcon(), "Hibernate", [=](){ emit hibernate(); } );
+    menu->addAction(QIcon(), "Suspend", [=](){ emit suspend(); } );
+
     // Uses the lamda expression [=](){ QApplication::quit(); } in place of a slot
-    menu->addAction(QIcon(), "Exit", [=](){ QApplication::quit(); });
+    menu->addAction(QIcon(), "Exit", [=](){ QApplication::quit(); } );
     setContextMenu(menu);
 }
 

@@ -28,7 +28,6 @@
 Battery::Battery(QObject *parent) : QObject(parent)
 {
     initializeVariables();
-    createModel();
 }
 
 Battery::Battery(int battery, QObject *parent) : QObject(parent)
@@ -36,7 +35,6 @@ Battery::Battery(int battery, QObject *parent) : QObject(parent)
     initializeVariables();
 
     setBatteryNumber(battery);
-    createModel();
 }
 
 int Battery::batteryNumber() const
@@ -82,6 +80,8 @@ void Battery::setBatteryNumber(int value)
     if (QFile(energyNow).exists())
         batteryCurrentEnergy->setFileName(energyNow);
 
+    createModel();
+    updateFiles();
     emit batteryNumberChanged(value);
 }
 
@@ -166,6 +166,7 @@ void Battery::setStatus(const BatteryStatus &value)
         break;
     case BatteryStatus::Discharging:
         statusStr = "Discharging";
+        updateFiles();
         break;
     default:
         break;
@@ -252,6 +253,11 @@ void Battery::createModel()
     }
 }
 
+int Battery::batteryCapacityNumber() const
+{
+    return m_batteryCapacityNumber;
+}
+
 QTime *Battery::timeLeft() const
 {
     return m_timeLeft;
@@ -334,16 +340,16 @@ void Battery::updateFiles()
 
         if (!batteryCapacity->fileName().isEmpty() && batteryCapacity->open(QFile::ReadOnly)) {
             QString batteryLevelString = batteryCapacity->readAll();
+            batteryCapacity->close();
             int capacity = batteryLevelString.toInt();
 
             if (m_batteryCapacityNumber != capacity)
                 setBatteryCapacity(capacity);
-
-            batteryCapacity->close();
         }
 
         if (!batteryStatus->fileName().isEmpty() && batteryStatus->open(QFile::ReadOnly)) {
             QString batteryStatusString = batteryStatus->readAll();
+            batteryStatus->close();
 
             if (batteryStatusString.contains("Full") && status != BatteryStatus::Full)
                 setStatus(BatteryStatus::Full);
@@ -351,39 +357,34 @@ void Battery::updateFiles()
                 setStatus(BatteryStatus::Discharging);
             else if (batteryStatusString.contains("Charging") && status != BatteryStatus::Charging)
                 setStatus(BatteryStatus::Charging);
-
-            batteryStatus->close();
         }
 
         if (!batteryLevel->fileName().isEmpty() && batteryLevel->open(QFile::ReadOnly)) {
             QString batteryLevelString = batteryLevel->readAll();
+            batteryLevel->close();
 
             if (batteryLevelString != m_level)
                 setLevel(batteryLevelString);
-
-            batteryLevel->close();
         }
 
         if (!batteryCurrentPower->fileName().isEmpty() && batteryCurrentPower->open(QFile::ReadOnly)) {
             QString currentPowerString = batteryCurrentPower->readAll();
+            batteryCurrentPower->close();
 
             if (m_currentPower != currentPowerString) {
                 setCurrentPower(currentPowerString);
                 calculateTimeRemaining();
             }
-
-            batteryCurrentPower->close();
         }
 
         if (!batteryCurrentEnergy->fileName().isEmpty() && batteryCurrentEnergy->open(QFile::ReadOnly)) {
             QString currentEnergyString = batteryCurrentEnergy->readAll();
+            batteryCurrentEnergy->close();
 
             if (m_currentEnergy != currentEnergyString) {
                 setCurrentEnergy(currentEnergyString);
                 calculateTimeRemaining();
             }
-
-            batteryCurrentEnergy->close();
         }
     }
 

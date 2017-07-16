@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network
+QT       += core gui network dbus
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -28,17 +28,20 @@ SOURCES += \
         mainwidget.cpp \
     systemtrayicon.cpp \
     battery.cpp \
-    brightnessslider.cpp
+    brightnessslider.cpp \
+    powermanagement.cpp
 
 HEADERS += \
         mainwidget.h \
     systemtrayicon.h \
     battery.h \
     globalheader.h \
-    brightnessslider.h
+    brightnessslider.h \
+    powermanagement.h
 
 FORMS += \
-        mainwidget.ui
+        mainwidget.ui \
+    powermanagement.ui
 
 DISTFILES += \
     CHANGELOG.md \
@@ -46,7 +49,8 @@ DISTFILES += \
     README.md
 
 LIBS += -lX11 \
-        -lXrandr
+        -lXrandr \
+        -lutil
 
 DEFINES += QT_NO_DEBUG_OUTPUT
 

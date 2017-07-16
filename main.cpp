@@ -26,6 +26,8 @@
 #include <QApplication>
 #include <QSettings>
 #include <QDebug>
+#include <unistd.h>
+#include <pty.h>
 
 #include "systemtrayicon.h"
 #include "globalheader.h"
@@ -47,6 +49,7 @@ static void readBatteryError(QString error, BatteryError errorType);
 static void configureApplication(const QApplication &app);
 static void handleArguments(const QApplication &app);
 static void sendMessage(LocalMSG message);
+static void openNewPty();
 static void checkForServer();
 static void writeConfig();
 static void readConfig();
@@ -54,6 +57,11 @@ static void readConfig();
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    if(!isatty(0)) {
+        openNewPty();
+    }
+
     env = QProcessEnvironment::systemEnvironment();
     soc = nullptr;
     w = nullptr;
@@ -64,14 +72,25 @@ int main(int argc, char *argv[])
 
     if (connectedToServer) {
         qWarning("Application already running.");
+#ifndef QT_DEBUG
         exit(1);
+#else
+        w = new MainWidget;
+#endif
     }
 
     tray = new SystemTrayIcon;
     battery = new Battery;
 
+    readConfig();
+
     tray->setModel(battery->model());
     w->setModel(battery->model());
+
+    tray->setCapacity(battery->batteryCapacityNumber());
+    tray->onStatusChanged(battery->getStatus());
+    tray->installEventFilter(w);
+    tray->setObjectName("tray");
 
     if (showMainWidget) {
         tray->show();
@@ -80,18 +99,19 @@ int main(int argc, char *argv[])
         tray->show();
     }
 
-    QObject::connect(battery, &Battery::batteryStatusChanged, tray, &SystemTrayIcon::onStatusChanged);
     QObject::connect(battery, &Battery::batteryCapacityChanged, tray, &SystemTrayIcon::setCapacity);
+    QObject::connect(battery, &Battery::batteryStatusChanged, tray, &SystemTrayIcon::onStatusChanged);
     QObject::connect(w, &MainWidget::selectedBatteryChanged, battery, &Battery::setBatteryNumber);
     QObject::connect(battery, &Battery::batteryError, tray, &SystemTrayIcon::onBatteryError);
     QObject::connect(battery, &Battery::filesUpdated, tray, &SystemTrayIcon::updateIcon);
+    QObject::connect(tray, &SystemTrayIcon::hibernate, w, &MainWidget::hibernate);
+    QObject::connect(tray, &SystemTrayIcon::suspend, w, &MainWidget::suspend);
     QObject::connect(battery, &Battery::batteryError, readBatteryError);
     QObject::connect(tray, &SystemTrayIcon::activated, onTrayActivated);
 
     qDebug() << "User: " << env.value("USER", "qt");
     qDebug() << "Display: " << env.value("DISPLAY", ":0.0");
-
-    readConfig();
+    qDebug() << "SystemTray object name: " << tray->objectName();
 
     int exitCode;
     exitCode = a.exec();
@@ -257,7 +277,7 @@ static void checkForServer()
                                  + env.value("USER", "qt")
                                  + "-"
                                  + QApplication::primaryScreen()->name());
-//                                 + env.value("DISPLAY", ":0.0"));
+    //                                 + env.value("DISPLAY", ":0.0"));
     soc = new QLocalSocket;
 
     soc->connectToServer(serverName);
@@ -303,4 +323,35 @@ LocalMSG::LocalMSG(MessageType mType, double percent)
     type = mType;
     percentOfBrightness = percent;
     version = QApplication::applicationVersion();
+}
+
+void openNewPty()
+{
+    bool is0, is1, is2;
+
+    is0 = isatty(0);
+    is1 = isatty(1);
+    is2 = isatty(2);
+
+    qDebug() << "Before openpty: is0 = " << is0 << " is1 = " << is1 << " and is2 = " << is2;
+
+    int slavepty, masterpty;
+    char ptyname[25];
+
+    openpty(&masterpty, &slavepty, ptyname, NULL, NULL);
+    close(0);
+    close(1);
+    close(2);
+    dup2(slavepty, 0);
+    dup2(slavepty, 1);
+    dup2(slavepty, 2);
+
+    is0 = isatty(0);
+    is1 = isatty(1);
+    is2 = isatty(2);
+
+    qDebug() << "Pty is " << ptyname;
+    qDebug() << "0 is a tty? " << is0;
+    qDebug() << "1 is a tty? " << is1;
+    qDebug() << "2 is a tty? " << is2;
 }

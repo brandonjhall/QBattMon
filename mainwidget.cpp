@@ -22,17 +22,21 @@
 #include <QStandardItemModel>
 #include <QDataWidgetMapper>
 #include <QMetaProperty>
+#include <QWheelEvent>
 #include <QDataStream>
 #include <QSettings>
+#include <QPoint>
 
 #include "mainwidget.h"
 #include "ui_mainwidget.h"
 #include "globalheader.h"
+#include "powermanagement.h"
 
 MainWidget::MainWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MainWidget)
 {
+    powerManagement = new PowerManagement(this);
     mapper = new QDataWidgetMapper;
 
     ui->setupUi(this);
@@ -92,6 +96,38 @@ void MainWidget::incBrightness(double inc)
 void MainWidget::decBrightness(double dec)
 {
     ui->horizontalSlider->decBrightness(dec);
+}
+
+void MainWidget::suspend()
+{
+    powerManagement->suspend();
+}
+
+void MainWidget::hibernate()
+{
+    powerManagement->hibernate();
+}
+
+bool MainWidget::eventFilter(QObject *watched, QEvent *event)
+{
+    QString name = watched->objectName();
+    QEvent::Type type = event->type();
+
+    if (name == "tray" && type == QEvent::Wheel) {
+        QWheelEvent *wheel = static_cast<QWheelEvent*>(event);
+        QPoint degrees = wheel->angleDelta() / 8;
+        QPoint steps = degrees / 10;
+
+        if (steps.y() < 0)
+            decBrightness(0.02);
+        else if (steps.y() > 0)
+            incBrightness(0.02);
+
+        return true;
+    }
+    else {
+        return QWidget::eventFilter(watched, event);
+    }
 }
 
 void MainWidget::selectBattery()

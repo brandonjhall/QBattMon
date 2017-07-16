@@ -45,6 +45,8 @@ public:
     QTime *timeLeft() const;
     QString level() const;
 
+    int batteryCapacityNumber() const;
+
 signals:
     void batteryError(QString error, BatteryError batteryError);
     void batteryStatusChanged(BatteryStatus status);
