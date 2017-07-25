@@ -55,6 +55,9 @@ LIBS += -lX11 \
 
 DEFINES += QT_NO_DEBUG_OUTPUT
 
+INCLUDEPATH += $$PWD/../includes
+LIBS += -L$$PWD/../libs/ -lbattudev
+
 CONFIG(debug, debug | release) {
     DEFINES -= QT_NO_DEBUG_OUTPUT
 }

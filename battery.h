@@ -26,7 +26,7 @@
 class QStandardItemModel;
 class QTimer;
 class QTime;
-class QFile;
+//class QFile;
 
 class Battery : public QObject
 {
@@ -52,7 +52,7 @@ signals:
     void batteryStatusChanged(BatteryStatus status);
     void batteryCapacityChanged(int m_level);
     void batteryNumberChanged(int number);
-    void filesUpdated();
+    void updated();
 
 public slots:
     void setBatteryNumber(int value);
@@ -78,22 +78,23 @@ private:
     QString m_currentPower;
     QString m_level;
 
-    QFile *batteryCurrentEnergy;
-    QFile *batteryCurrentPower;
-    QFile *batteryCapacity;
-    QFile *batteryStatus;
-    QFile *batteryLevel;
+//    QFile *batteryCurrentEnergy;
+//    QFile *batteryCurrentPower;
+//    QFile *batteryCapacity;
+//    QFile *batteryStatus;
+//    QFile *batteryLevel;
 
     QStandardItemModel *m_model;
 
     BatteryError lastError = BatteryError::NoError;
-    QStringList batteryFolders;
+//    QStringList batteryFolders;
     BatteryStatus status;
     QTimer *updateTimer;
     QTime *m_timeLeft;
 
 private slots:
-    void updateFiles();
+//    void updateFiles();
+    void updateUdev();
 };
 
 #endif // BATTERY_H

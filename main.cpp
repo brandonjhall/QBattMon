@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     QObject::connect(battery, &Battery::batteryStatusChanged, tray, &SystemTrayIcon::onStatusChanged);
     QObject::connect(w, &MainWidget::selectedBatteryChanged, battery, &Battery::setBatteryNumber);
     QObject::connect(battery, &Battery::batteryError, tray, &SystemTrayIcon::onBatteryError);
-    QObject::connect(battery, &Battery::filesUpdated, tray, &SystemTrayIcon::updateIcon);
+    QObject::connect(battery, &Battery::updated, tray, &SystemTrayIcon::updateIcon);
     QObject::connect(tray, &SystemTrayIcon::hibernate, w, &MainWidget::hibernate);
     QObject::connect(tray, &SystemTrayIcon::suspend, w, &MainWidget::suspend);
     QObject::connect(battery, &Battery::batteryError, readBatteryError);

@@ -20,10 +20,17 @@
 #include <QStandardItemModel>
 #include <QTimer>
 #include <QTime>
-#include <QFile>
-#include <QDir>
 
 #include "battery.h"
+extern "C" {
+#include <udevhelper.h>
+
+namespace battudev {
+int numbatteries;
+BatteryStruct **batteries;
+BatteryStruct *currentBattery;
+}
+}
 
 Battery::Battery(QObject *parent) : QObject(parent)
 {
@@ -46,42 +53,9 @@ void Battery::setBatteryNumber(int value)
 {
     m_batteryNumber = value;
 
-    QString energyNow;
-    QString powerNow;
-    QString capacity;
-    QString status;
-    QString level;
-
-    if (batteryFolders.contains(QString("BAT%1").arg(value))) {
-        QString batteryPath = POWER_DIR + QString("/BAT%1").arg(value);
-        capacity = batteryPath + "/capacity";
-        status = batteryPath + "/status";
-        level = batteryPath + "/capacity_level";
-        powerNow = batteryPath + "/power_now";
-        energyNow = batteryPath + "/energy_now";
-        lastError = BatteryError::NoError;
-    } else {
-        emit batteryError("No battery", BatteryError::NoBattery);
-        lastError = BatteryError::NoBattery;
-    }
-
-    if (QFile(level).exists())
-        batteryLevel->setFileName(level);
-
-    if (QFile(capacity).exists())
-        batteryCapacity->setFileName(capacity);
-
-    if (QFile(status).exists())
-        batteryStatus->setFileName(status);
-
-    if (QFile(powerNow).exists())
-        batteryCurrentPower->setFileName(powerNow);
-
-    if (QFile(energyNow).exists())
-        batteryCurrentEnergy->setFileName(energyNow);
-
     createModel();
-    updateFiles();
+    updateUdev();
+
     emit batteryNumberChanged(value);
 }
 
@@ -121,18 +95,23 @@ QTime *Battery::calculateTimeRemaining(int energy, int usage)
 
 void Battery::initializeVariables()
 {
-    batteryCurrentEnergy = new QFile;
-    batteryCurrentPower = new QFile;
-    batteryCapacity = new QFile;
-    batteryStatus = new QFile;
-    batteryLevel = new QFile;
+    int maxbatteries = 5;
+    battudev::batteries = initializeHelper(&maxbatteries);
+    battudev::numbatteries = maxbatteries;
 
-    batteryFolders = QDir(POWER_DIR).entryList(QStringList() << "BAT*");
+    if(maxbatteries > 0) {
+        updateTimer = new QTimer;
 
-    updateTimer = new QTimer;
+        battudev::currentBattery = battudev::batteries[0];
+        connect(updateTimer, &QTimer::timeout, this, &Battery::updateUdev);
+    }
+    else {
+        lastError = BatteryError::NoBattery;
+        emit batteryError("No batteries found", lastError);
+        return;
+    }
 
     updateTimer->setInterval(1000);
-    connect(updateTimer, &QTimer::timeout, this, &Battery::updateFiles);
     updateTimer->start();
 }
 
@@ -166,11 +145,12 @@ void Battery::setStatus(const BatteryStatus &value)
         break;
     case BatteryStatus::Discharging:
         statusStr = "Discharging";
-        updateFiles();
         break;
     default:
         break;
     }
+
+    updateUdev();
 
     item->setText(statusStr);
     item->setData(static_cast<int>(status), Qt::UserRole);
@@ -208,47 +188,28 @@ void Battery::createModel()
 
     m_model->setHorizontalHeaderLabels(headers);
 
-    foreach (QString battery, batteryFolders) {
-        QString batteryPath = QString(POWER_DIR) + QString("/") + battery;
-        QStandardItem *batteryItem = new QStandardItem(battery);
+    m_maxEnergy = battudev::currentBattery->energyfull / 10000;
+    m_currentEnergy = battudev::currentBattery->energynow / 10000;
+    m_currentPower = battudev::currentBattery->powernow / 10000;
+
+    for(int i = 0; i < battudev::numbatteries; i++) {
         QList<QStandardItem*> row;
+        BatteryStruct *battery = battudev::batteries[i];
 
-        row.append(batteryItem);
+        row.append(new QStandardItem(battery->name));
+        row.append(new QStandardItem(battery->technology));
+        row.append(new QStandardItem("Battery"));
+        row.append(new QStandardItem(battery->manufacturer));
+        row.append(new QStandardItem(battery->status));
+        row.append(new QStandardItem(battery->level));
+        row.append(new QStandardItem(QString::number(battery->capacity) + "%"));
+        row.append(new QStandardItem(QString::number(m_maxEnergy) + " mAh"));
+        row.append(new QStandardItem(QString::number(battery->powernow)));
+        row.append(new QStandardItem(QString::number(battery->energynow)));
+        row.append(new QStandardItem(battery->modelname));
+        row.append(new QStandardItem(QString::number(battery->serialnumber)));
+        row.append(new QStandardItem(""));
 
-        foreach (QString fileName, files) {
-            QFile file(batteryPath + "/" + fileName);
-            QString contents;
-
-            if (file.open(QFile::ReadOnly))
-                contents = file.readAll();
-
-            contents = contents.replace("\n", "");
-
-            if (fileName == "capacity")
-                contents += "%";
-
-            if (fileName == "energy_full" || fileName == "energy_now" || fileName == "power_now") {
-                bool ok = false;
-                int contentsInt = contents.toInt(&ok);
-
-                if (ok) {
-                    contentsInt = contentsInt / 10000;
-                    contents = QString("%1 mAh").arg(contentsInt);
-                }
-
-                if (fileName == "energy_now")
-                    energy = contentsInt;
-                else if (fileName == "power_now")
-                    usage = contentsInt;
-                else if (fileName == "energy_full")
-                    m_maxEnergy = contentsInt;
-            }
-
-            row.append(new QStandardItem(contents));
-        }
-
-        calculateTimeRemaining();
-        row.append(new QStandardItem(m_timeLeft->toString()));
         m_model->insertRow(m_model->rowCount(), row);
     }
 }
@@ -334,59 +295,33 @@ QStandardItemModel *Battery::model() const
     return m_model;
 }
 
-void Battery::updateFiles()
+void Battery::updateUdev()
 {
-    if (lastError == BatteryError::NoError) {
+    if(checkForUpdates(battudev::currentBattery)) {
+        BatteryStatus cstatus = BatteryStatus::Discharging;
 
-        if (!batteryCapacity->fileName().isEmpty() && batteryCapacity->open(QFile::ReadOnly)) {
-            QString batteryLevelString = batteryCapacity->readAll();
-            batteryCapacity->close();
-            int capacity = batteryLevelString.toInt();
+        setBatteryCapacity(battudev::currentBattery->capacity);
+        setCurrentEnergy(QString::number(battudev::currentBattery->energynow));
+        setCurrentPower(QString::number(battudev::currentBattery->powernow));
+        setLevel(battudev::currentBattery->level);
 
-            if (m_batteryCapacityNumber != capacity)
-                setBatteryCapacity(capacity);
+        switch (battudev::currentBattery->status[0]) {
+        case 'D':
+            break;
+        case 'C':
+            cstatus = BatteryStatus::Charging;
+            break;
+        case 'F':
+            cstatus = BatteryStatus::Full;
+            break;
+        default:
+            break;
         }
 
-        if (!batteryStatus->fileName().isEmpty() && batteryStatus->open(QFile::ReadOnly)) {
-            QString batteryStatusString = batteryStatus->readAll();
-            batteryStatus->close();
+        if(status != cstatus)
+            setStatus(cstatus);
 
-            if (batteryStatusString.contains("Full") && status != BatteryStatus::Full)
-                setStatus(BatteryStatus::Full);
-            else if (batteryStatusString.contains("Discharging") && status != BatteryStatus::Discharging)
-                setStatus(BatteryStatus::Discharging);
-            else if (batteryStatusString.contains("Charging") && status != BatteryStatus::Charging)
-                setStatus(BatteryStatus::Charging);
-        }
-
-        if (!batteryLevel->fileName().isEmpty() && batteryLevel->open(QFile::ReadOnly)) {
-            QString batteryLevelString = batteryLevel->readAll();
-            batteryLevel->close();
-
-            if (batteryLevelString != m_level)
-                setLevel(batteryLevelString);
-        }
-
-        if (!batteryCurrentPower->fileName().isEmpty() && batteryCurrentPower->open(QFile::ReadOnly)) {
-            QString currentPowerString = batteryCurrentPower->readAll();
-            batteryCurrentPower->close();
-
-            if (m_currentPower != currentPowerString) {
-                setCurrentPower(currentPowerString);
-                calculateTimeRemaining();
-            }
-        }
-
-        if (!batteryCurrentEnergy->fileName().isEmpty() && batteryCurrentEnergy->open(QFile::ReadOnly)) {
-            QString currentEnergyString = batteryCurrentEnergy->readAll();
-            batteryCurrentEnergy->close();
-
-            if (m_currentEnergy != currentEnergyString) {
-                setCurrentEnergy(currentEnergyString);
-                calculateTimeRemaining();
-            }
-        }
+        calculateTimeRemaining();
+        emit updated();
     }
-
-    emit filesUpdated();
 }
